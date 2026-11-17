@@ -174,6 +174,7 @@ button:focus-visible,.tab:focus-visible,.btn:focus-visible{outline:2px solid var
 .vcode{font:600 15px var(--mono);letter-spacing:.6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vmeta{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:3px;font-size:13px;color:var(--ink-2)}
 .vmeta span{white-space:nowrap}
+.vmeta .pinv{font:600 13px var(--mono);color:var(--ink);letter-spacing:.5px}
 .vmeta .older{color:var(--warn);font-weight:600}
 .vamt{grid-area:amt;text-align:right;font-weight:600;font-size:16px;font-variant-numeric:tabular-nums}
 .vsteps{grid-area:steps;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
@@ -435,11 +436,11 @@ td.c,th.c{text-align:center}
         <div class="toolbar">
           <div class="f"><label for="hFrom">From</label><input class="input" type="date" id="hFrom"></div>
           <div class="f"><label for="hTo">To</label><input class="input" type="date" id="hTo"></div>
-          <div class="f grow"><label for="hSearch">Search</label><input class="input" id="hSearch" placeholder="Code, table, name or note"></div>
+          <div class="f grow"><label for="hSearch">Search</label><input class="input" id="hSearch" placeholder="Code, PIN, table, name or note"></div>
           <button class="btn" id="csvBtn" type="button"><svg class="ic"><use href="#i-download"/></svg>Download CSV</button>
         </div>
         <div class="table-wrap"><table>
-          <thead><tr><th>Night</th><th>Time</th><th>Code</th><th>Table</th><th>Deal</th><th class="r">Amount</th><th>Logged by</th><th class="c">itison</th><th class="c">Till</th><th class="c">Receipt</th><th></th></tr></thead>
+          <thead><tr><th>Night</th><th>Time</th><th>Code</th><th>PIN</th><th>Table</th><th>Deal</th><th class="r">Amount</th><th>Logged by</th><th class="c">itison</th><th class="c">Till</th><th class="c">Receipt</th><th></th></tr></thead>
           <tbody id="hBody"></tbody>
         </table></div>
         <div class="table-foot"><span id="hSummary"></span><span id="hTotal" class="num"></span></div>
@@ -592,7 +593,7 @@ $('pin').addEventListener('input', () => { const p = $('pin'); const d = p.value
 $('addNote').addEventListener('click', () => { $('noteWrap').hidden = false; $('addNote').hidden = true; $('note').focus(); });
 
 /* ---------- step 1 → 2: check details, copy the code, open itison ---------- */
-let pending = null;   // the voucher being redeemed; its PIN lives only here, in memory, never saved
+let pending = null;   // the voucher being redeemed, until itison accepts or rejects it
 async function copyText(text, label){
   try { await navigator.clipboard.writeText(text); toast(`${label} copied.`); return true; }
   catch(e){ toast(`Couldn't copy. Type the ${label.toLowerCase()} instead.`, 'warn'); return false; }
@@ -639,7 +640,7 @@ function finish(accepted){
   const now = Date.now();
   const v = {
     id: uid(), code: pending.code, at: now, night: nightOf(now),
-    table: pending.table, deal: pending.deal, value: pending.value, staff: pending.staff, note: pending.note,
+    pin: pending.pin, table: pending.table, deal: pending.deal, value: pending.value, staff: pending.staff, note: pending.note,
     steps: { itison: accepted ? now : null, till: null, receipt: null }
   };
   if (!accepted) v.status = 'rejected';
@@ -664,7 +665,7 @@ function rowHTML(v){
   return `<div class="vrow ${rej?'rejected':isDone(v)?'done':''} ${v.id===flashId?'flash':''}">
     <div class="vmain">
       <div class="vcode">${esc(v.code)}</div>
-      <div class="vmeta">${older}<span>Table ${esc(v.table||'–')}</span><span>${esc(v.staff||'No name')}</span><span>${timeOf(v.at)}</span>${v.deal ? `<span>${esc(v.deal)}</span>` : ''}${v.note ? `<span>${esc(v.note)}</span>` : ''}</div>
+      <div class="vmeta">${older}${v.pin ? `<span>PIN <b class="pinv">${esc(v.pin)}</b></span>` : ''}<span>Table ${esc(v.table||'–')}</span><span>${esc(v.staff||'No name')}</span><span>${timeOf(v.at)}</span>${v.deal ? `<span>${esc(v.deal)}</span>` : ''}${v.note ? `<span>${esc(v.note)}</span>` : ''}</div>
     </div>
     <div class="vamt">${money(v.value)}</div>
     ${rej ? `<div class="vreject"><span class="pill bad">${icon('x')}Rejected by itison</span></div>` : `<div class="vsteps" role="group" aria-label="Steps for ${esc(v.code)}">${steps}</div>`}
@@ -765,13 +766,13 @@ $('runCheck').addEventListener('click', () => {
 function historyRows(){
   const f = $('hFrom').value, to = $('hTo').value, q = $('hSearch').value.trim().toLowerCase();
   return kept().filter(v => (!f || v.night >= f) && (!to || v.night <= to) &&
-    (!q || [v.code,v.table,v.staff,v.deal,v.note].join(' ').toLowerCase().includes(q))).sort((a,b) => b.at - a.at);
+    (!q || [v.code,v.pin,v.table,v.staff,v.deal,v.note].join(' ').toLowerCase().includes(q))).sort((a,b) => b.at - a.at);
 }
 function renderHistory(){
   const rows = historyRows();
   const tick = ts => ts ? `<span class="yes" title="${timeOf(ts)}">${icon('check')}</span>` : `<span class="no" title="Not done">${icon('x')}</span>`;
-  $('hBody').innerHTML = rows.map(v => `<tr><td>${niceNight(v.night)}</td><td class="num">${timeOf(v.at)}</td><td class="mono">${esc(v.code)}</td><td>${esc(v.table)}</td><td>${esc(v.deal)}</td><td class="r num">${money(v.value)}</td><td>${esc(v.staff)}</td>${v.status==='rejected' ? '<td class="c" colspan="3"><span class="pill bad">Rejected by itison</span></td>' : `<td class="c">${tick(v.steps.itison)}</td><td class="c">${tick(v.steps.till)}</td><td class="c">${tick(v.steps.receipt)}</td>`}<td class="r"><button type="button" class="icon-btn" data-del="${v.id}" aria-label="Remove ${esc(v.code)}" title="Remove">${icon('trash')}</button></td></tr>`).join('')
-    || `<tr><td colspan="11"><div class="empty"><strong>No vouchers match</strong><p>Try a wider date range or a different search.</p></div></td></tr>`;
+  $('hBody').innerHTML = rows.map(v => `<tr><td>${niceNight(v.night)}</td><td class="num">${timeOf(v.at)}</td><td class="mono">${esc(v.code)}</td><td class="mono">${esc(v.pin||'–')}</td><td>${esc(v.table)}</td><td>${esc(v.deal)}</td><td class="r num">${money(v.value)}</td><td>${esc(v.staff)}</td>${v.status==='rejected' ? '<td class="c" colspan="3"><span class="pill bad">Rejected by itison</span></td>' : `<td class="c">${tick(v.steps.itison)}</td><td class="c">${tick(v.steps.till)}</td><td class="c">${tick(v.steps.receipt)}</td>`}<td class="r"><button type="button" class="icon-btn" data-del="${v.id}" aria-label="Remove ${esc(v.code)}" title="Remove">${icon('trash')}</button></td></tr>`).join('')
+    || `<tr><td colspan="12"><div class="empty"><strong>No vouchers match</strong><p>Try a wider date range or a different search.</p></div></td></tr>`;
   const acc = rows.filter(v => v.status !== 'rejected'); const nRej = rows.length - acc.length;
   $('hSummary').textContent = `${acc.length} ${plural(acc.length,'voucher')}` + (nRej ? ` · ${nRej} rejected` : '');
   $('hTotal').textContent = money(acc.reduce((s,v)=>s+v.value,0));
@@ -788,8 +789,8 @@ function download(name, text, type){
 $('csvBtn').addEventListener('click', () => {
   const q = s => '"' + String(s ?? '').replace(/"/g,'""') + '"';
   const t = ts => ts ? new Date(ts).toLocaleString('en-GB') : '';
-  const lines = [['Night','Logged at','Code','Table','Deal','Till amount','Logged by','Redeemed on itison','Put through till','Receipt in till','Note','Status'].map(q).join(',')];
-  historyRows().slice().reverse().forEach(v => lines.push([v.night, t(v.at), v.code, v.table, v.deal, v.value.toFixed(2), v.staff, t(v.steps.itison), t(v.steps.till), t(v.steps.receipt), v.note, v.status === 'rejected' ? 'Rejected by itison' : 'Redeemed'].map(q).join(',')));
+  const lines = [['Night','Logged at','Code','PIN','Table','Deal','Till amount','Logged by','Redeemed on itison','Put through till','Receipt in till','Note','Status'].map(q).join(',')];
+  historyRows().slice().reverse().forEach(v => lines.push([v.night, t(v.at), v.code, v.pin || '', v.table, v.deal, v.value.toFixed(2), v.staff, t(v.steps.itison), t(v.steps.till), t(v.steps.receipt), v.note, v.status === 'rejected' ? 'Rejected by itison' : 'Redeemed'].map(q).join(',')));
   download(`itison-vouchers-${tonight()}.csv`, lines.join('\r\n'), 'text/csv');
   toast('Spreadsheet downloaded.');
 });
