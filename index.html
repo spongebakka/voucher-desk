@@ -2,255 +2,478 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e1116">
 <title>Voucher Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: top bar with tonight's numbers; left column = add + close-out, right column = live list */
+/* Design system: one spacing scale (4px base), two radii, one control height, one accent.
+   Layout: dark app bar → KPI strip → form panel (fixed 400px) beside a live voucher list. */
 :root{
-  --bg:#eef1ef; --panel:#ffffff; --ink:#18221e; --muted:#5c6b65; --line:#d5ddd9;
-  --accent:#1d5c48; --accent-ink:#ffffff; --accent-soft:#dcebe4;
-  --warn:#8a5a00; --warn-bg:#fdf0d5; --warn-line:#e8c77d;
-  --bad:#9b2c2c; --bad-bg:#fbe5e3; --good:#1f6b3a; --good-bg:#e1f2e6;
-  --display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
-  --body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --bg:#f3f4f6; --surface:#ffffff; --surface-2:#f8f9fa; --line:#e4e7eb; --line-2:#d1d6dc;
+  --ink:#101318; --ink-2:#4b5361; --ink-3:#848c99;
+  --accent:#2d5bff; --accent-hover:#1f48e6; --accent-ink:#ffffff; --accent-soft:#e9efff;
+  --ok:#0f7a55; --ok-soft:#e2f4ec; --warn:#9a5b00; --warn-soft:#fff2dc; --warn-line:#f0cf95;
+  --bad:#c42b2b; --bad-soft:#fdeaea;
+  --bar:#0e1116; --bar-ink:#f4f6f8; --bar-ink-2:#8c95a3; --bar-line:#232833;
+  --sans:"Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:"Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --r-sm:8px; --r:12px; --h:44px;
+  --shadow:0 1px 2px rgba(16,19,24,.04), 0 1px 1px rgba(16,19,24,.03);
 }
 @media (prefers-color-scheme:dark){:root{
-  --bg:#111715; --panel:#19211e; --ink:#e6ece9; --muted:#97a6a0; --line:#2c3833;
-  --accent:#5cc49c; --accent-ink:#0b1712; --accent-soft:#1d332a;
-  --warn:#f2c46b; --warn-bg:#33270f; --warn-line:#6b5220;
-  --bad:#f19a92; --bad-bg:#3a1c1a; --good:#7fd69c; --good-bg:#16301f; color-scheme:dark}}
+  --bg:#0b0d11; --surface:#14171d; --surface-2:#1a1e25; --line:#252a33; --line-2:#323845;
+  --ink:#eef1f5; --ink-2:#a9b0bd; --ink-3:#6c7482;
+  --accent:#6b8cff; --accent-hover:#86a0ff; --accent-ink:#0b0d11; --accent-soft:#1b2342;
+  --ok:#42cf98; --ok-soft:#0f2a20; --warn:#f3b450; --warn-soft:#2b2110; --warn-line:#5a4318;
+  --bad:#ff7b7b; --bad-soft:#341819;
+  --bar:#07080b; --bar-line:#1c2029; --shadow:none; color-scheme:dark}}
+
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
-.wrap{max-width:1180px;margin:0 auto;padding:20px max(16px,env(safe-area-inset-left,0px)) 60px max(16px,env(safe-area-inset-right,0px))}
-header{display:flex;flex-wrap:wrap;gap:16px 28px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
-h1{font:700 30px/1 var(--display);margin:0;letter-spacing:-.5px}
-h1 small{display:block;font:500 13px var(--body);color:var(--muted);letter-spacing:0;margin-top:6px}
-h2{font:700 18px/1.2 var(--display);margin:0 0 12px}
-.stats{display:flex;gap:10px;flex-wrap:wrap}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-width:110px}
-.stat b{display:block;font:700 22px/1.2 var(--display);font-variant-numeric:tabular-nums}
-.stat span{font-size:12px;color:var(--muted)}
-.stat.warn{background:var(--warn-bg);border-color:var(--warn-line)} .stat.warn b,.stat.warn span{color:var(--warn)}
-nav{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
-nav button{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 14px;border-radius:999px;font:500 14px var(--body);cursor:pointer}
-nav button[aria-current="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:18px;align-items:start}
-@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
-.col{display:flex;flex-direction:column;gap:18px;min-width:0}
-label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:0 0 4px;letter-spacing:.2px}
-input,select,textarea{width:100%;font:15px var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px}
-textarea{min-height:90px;resize:vertical;font-size:13px}
-input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-#code{font:500 18px var(--mono);letter-spacing:1px;text-transform:uppercase}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.field{margin-bottom:12px}
-.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:9px 14px;border-radius:8px;font:600 14px var(--body);cursor:pointer}
-.btn:hover{border-color:var(--muted)}
-.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);width:100%;padding:12px;font-size:15px}
-.btn.small{padding:5px 10px;font-size:13px}
-.btn.link{border:none;background:none;color:var(--muted);text-decoration:underline;padding:4px}
-.msg{font-size:13px;margin-top:8px;padding:8px 10px;border-radius:8px}
-.msg.warn{background:var(--warn-bg);color:var(--warn)} .msg.bad{background:var(--bad-bg);color:var(--bad)} .msg.good{background:var(--good-bg);color:var(--good)}
-.hint{font-size:12px;color:var(--muted);margin:6px 0 0}
-.list{display:flex;flex-direction:column}
-.v{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 14px;padding:12px 0;border-top:1px solid var(--line)}
-.v:first-child{border-top:none}
-.v .code{font:500 15px var(--mono);letter-spacing:.5px;word-break:break-all}
-.v .meta{font-size:13px;color:var(--muted)}
-.v .val{font:700 17px var(--display);font-variant-numeric:tabular-nums;text-align:right}
-.steps{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.step{display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--warn-line);background:var(--warn-bg);color:var(--warn);border-radius:999px;padding:5px 11px;font:600 13px var(--body);cursor:pointer}
-.step::before{content:"";width:12px;height:12px;border-radius:50%;border:2px solid currentColor;flex:none}
-.step[aria-pressed="true"]{border:1px solid transparent;background:var(--good-bg);color:var(--good)}
-.step[aria-pressed="true"]::before{background:currentColor;box-shadow:inset 0 0 0 2px var(--good-bg)}
-.v.done .step[aria-pressed="true"]{background:transparent;border-color:var(--line);color:var(--muted)}
-.empty{color:var(--muted);font-size:14px;padding:14px 0}
-.open-card{border-color:var(--warn-line)}
-.open-card h2{color:var(--warn)}
-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
-th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
-th{font-size:12px;color:var(--muted);font-weight:600}
-td.c{font-family:var(--mono)}
-.scroll{overflow-x:auto}
-.check-out{display:flex;flex-direction:column;gap:8px;margin-top:12px}
-.setrow{display:grid;grid-template-columns:minmax(0,1fr) 90px auto;gap:8px;margin-bottom:8px;align-items:center}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
-.chip{display:inline-flex;gap:6px;align-items:center;background:var(--accent-soft);border-radius:999px;padding:4px 6px 4px 12px;font-size:14px}
-.chip button{border:none;background:none;color:var(--muted);cursor:pointer;font-size:15px;padding:0 4px}
-.banner{background:var(--bad-bg);color:var(--bad);padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:14px}
-.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:12px}
-.toolbar > div{min-width:140px}
-@media (prefers-reduced-motion:no-preference){.v.new{animation:flash 1.2s ease-out}@keyframes flash{from{background:var(--accent-soft)}to{background:transparent}}}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+.ic{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.num{font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ---------- app bar ---------- */
+.bar{background:var(--bar);color:var(--bar-ink);border-bottom:1px solid var(--bar-line);position:sticky;top:0;z-index:20}
+.bar-in{max-width:1240px;margin:0 auto;height:60px;display:flex;align-items:center;gap:24px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;letter-spacing:-.2px;white-space:nowrap}
+.mark{width:28px;height:28px;border-radius:7px;background:var(--accent);display:grid;place-items:center;color:#fff}
+.mark .ic{width:16px;height:16px;stroke-width:2.4}
+.tabs{display:flex;gap:2px;height:100%}
+.tab{appearance:none;background:none;border:0;color:var(--bar-ink-2);font-weight:500;font-size:14px;padding:0 14px;height:100%;cursor:pointer;position:relative;white-space:nowrap}
+.tab:hover{color:var(--bar-ink)}
+.tab[aria-selected="true"]{color:var(--bar-ink)}
+.tab[aria-selected="true"]::after{content:"";position:absolute;left:14px;right:14px;bottom:-1px;height:2px;background:var(--accent);border-radius:2px 2px 0 0}
+.tab .count{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:var(--warn);color:#1a1200;font-size:11px;font-weight:700}
+.night{margin-left:auto;color:var(--bar-ink-2);font-size:13px;white-space:nowrap}
+@media (max-width:760px){
+  .bar-in{height:auto;flex-wrap:wrap;gap:0;padding-top:12px}
+  .brand{height:28px}
+  .night{font-size:12px}
+  .tabs{order:3;width:100%;height:46px;overflow-x:auto;margin:6px -6px 0;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{padding:0 10px}
+  .tab[aria-selected="true"]::after{left:10px;right:10px}
+}
+
+/* ---------- page ---------- */
+main{max-width:1240px;margin:0 auto;padding-top:24px;padding-bottom:calc(48px + env(safe-area-inset-bottom,0px));padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+@media (max-width:760px){main{padding-top:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.page-head h1{font-size:24px;line-height:1.2;font-weight:600;letter-spacing:-.4px;margin:0}
+.page-head p{margin:4px 0 0;color:var(--ink-2);font-size:14px}
+
+/* KPI strip: four equal tiles, 2×2 on phones */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:24px}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);min-width:0}
+.kpi-label{font-size:13px;color:var(--ink-2);display:flex;align-items:center;gap:6px}
+.kpi-val{font-size:26px;font-weight:600;letter-spacing:-.6px;line-height:1.25;margin-top:4px}
+.kpi.attn{background:var(--warn-soft);border-color:var(--warn-line)}
+.kpi.attn .kpi-label,.kpi.attn .kpi-val{color:var(--warn)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+
+.layout{display:grid;grid-template-columns:400px minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:1000px){.layout{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:24px;min-width:0}
+
+/* ---------- panels ---------- */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);min-width:0}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line);min-height:60px}
+.panel-head h2{font-size:16px;font-weight:600;margin:0;letter-spacing:-.2px}
+.panel-head .sub{font-size:13px;color:var(--ink-3)}
+.panel-body{padding:20px}
+@media (max-width:760px){.panel-head{padding:14px 16px}.panel-body{padding:16px}}
+.sticky{position:sticky;top:84px}
+@media (max-width:1000px){.sticky{position:static}}
+
+/* ---------- form controls ---------- */
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.f{display:flex;flex-direction:column;gap:6px;min-width:0}
+.f.full{grid-column:1/-1}
+.f label,.lbl{font-size:13px;font-weight:500;color:var(--ink-2)}
+.input,.select,.textarea{width:100%;height:var(--h);border:1px solid var(--line-2);background:var(--surface);border-radius:var(--r-sm);padding:0 12px;font-size:15px;transition:border-color .15s, box-shadow .15s}
+.textarea{height:auto;min-height:120px;padding:10px 12px;resize:vertical;font-size:14px;line-height:1.5}
+.select{appearance:none;padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23848c99' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;text-overflow:ellipsis}
+.input::placeholder,.textarea::placeholder{color:var(--ink-3)}
+.input:hover,.select:hover,.textarea:hover{border-color:var(--ink-3)}
+.input:focus,.select:focus,.textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.input.code{height:52px;font:600 19px var(--mono);letter-spacing:1.5px;text-transform:uppercase}
+.input.code::placeholder{font-family:var(--sans);font-weight:400;font-size:15px;letter-spacing:0;text-transform:none}
+.money{position:relative}
+.money::before{content:"£";position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-3);pointer-events:none}
+.money .input{padding-left:26px}
+.help{font-size:12px;color:var(--ink-3);margin:0}
+.field-alert{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--bad);background:var(--bad-soft);border-radius:var(--r-sm);padding:10px 12px}
+.field-alert .ic{width:16px;height:16px;margin-top:2px}
+
+.switch{display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;min-height:var(--h);padding:0 14px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface-2);font-size:14px;font-weight:500}
+.switch input{position:absolute;opacity:0;pointer-events:none}
+.track{width:36px;height:20px;border-radius:10px;background:var(--line-2);position:relative;flex:none;transition:background .15s}
+.track::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .15s}
+.switch input:checked + .track{background:var(--ok)}
+.switch input:checked + .track::after{transform:translateX(16px)}
+.switch input:focus-visible + .track{box-shadow:0 0 0 3px var(--accent-soft)}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:var(--h);padding:0 16px;border-radius:var(--r-sm);border:1px solid var(--line-2);background:var(--surface);color:var(--ink);font-weight:500;font-size:14px;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s}
+.btn:hover{background:var(--surface-2);border-color:var(--ink-3)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn.block{width:100%}
+.btn.lg{height:50px;font-size:15px}
+.btn.sm{height:36px;padding:0 12px;font-size:13px}
+button:focus-visible,.tab:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.icon-btn{width:36px;height:36px;display:grid;place-items:center;border-radius:var(--r-sm);border:1px solid transparent;background:none;color:var(--ink-3);cursor:pointer}
+.icon-btn:hover{background:var(--surface-2);color:var(--ink);border-color:var(--line)}
+.icon-btn.armed{width:auto;padding:0 10px;background:var(--bad-soft);color:var(--bad);font-size:13px;font-weight:600;border-color:transparent}
+.actions{display:grid;gap:10px;margin-top:20px}
+
+.notice{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:var(--r-sm);background:var(--accent-soft);color:var(--ink);font-size:14px;margin-bottom:20px}
+
+/* ---------- voucher list ---------- */
+.list-panel{container-type:inline-size}
+.group-label{display:flex;align-items:center;gap:8px;padding:12px 20px;background:var(--surface-2);border-bottom:1px solid var(--line);font-size:12px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-2)}
+.group-label.attn{color:var(--warn);background:var(--warn-soft)}
+.group-label .n{margin-left:auto;font-variant-numeric:tabular-nums}
+.vrow{display:grid;grid-template-columns:minmax(0,1fr) 80px 312px 36px;grid-template-areas:"main amt steps del";align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.vrow:last-child{border-bottom:0}
+.vmain{grid-area:main;min-width:0}
+.vcode{font:600 15px var(--mono);letter-spacing:.6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vmeta{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:3px;font-size:13px;color:var(--ink-2)}
+.vmeta span{white-space:nowrap}
+.vmeta .older{color:var(--warn);font-weight:600}
+.vamt{grid-area:amt;text-align:right;font-weight:600;font-size:16px;font-variant-numeric:tabular-nums}
+.vsteps{grid-area:steps;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.vdel{grid-area:del;justify-self:end}
+.tog{height:36px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--r-sm);border:1px dashed var(--warn-line);background:var(--warn-soft);color:var(--warn);font-size:13px;font-weight:600;cursor:pointer;padding:0 6px;white-space:nowrap;min-width:0}
+.tog .ic{width:15px;height:15px;stroke-width:2.4}
+.tog .on{display:none}
+.tog[aria-pressed="true"]{border:1px solid transparent;background:var(--ok-soft);color:var(--ok)}
+.tog[aria-pressed="true"] .on{display:block}
+.tog[aria-pressed="true"] .off{display:none}
+.vrow.done .tog{background:transparent;border:1px solid var(--line);color:var(--ink-3)}
+.vrow.done .tog .ic{color:var(--ok)}
+.vrow.flash{animation:flash 1.4s ease-out}
+@keyframes flash{from{background:var(--accent-soft)}to{background:transparent}}
+@container (max-width:680px){
+  .vrow{grid-template-columns:minmax(0,1fr) auto 36px;grid-template-areas:"main amt del" "steps steps steps";gap:12px;padding:14px 16px}
+  .group-label{padding:10px 16px}
+}
+.empty{padding:40px 24px;text-align:center;color:var(--ink-2)}
+.empty .ic{width:28px;height:28px;color:var(--ink-3);margin-bottom:8px}
+.empty strong{display:block;color:var(--ink);font-weight:600;margin-bottom:4px}
+.empty p{margin:0 auto;max-width:340px;font-size:14px}
+
+/* ---------- close out ---------- */
+.close-layout{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:1000px){.close-layout{grid-template-columns:minmax(0,1fr)}}
+.steps-guide{counter-reset:s;list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.steps-guide li{counter-increment:s;display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;font-size:14px;color:var(--ink-2)}
+.steps-guide li::before{content:counter(s);width:28px;height:28px;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;font-weight:600;font-size:13px;color:var(--ink)}
+.steps-guide b{color:var(--ink);font-weight:600;display:block}
+.sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid var(--line)}
+.sum > div{padding:16px 20px;border-right:1px solid var(--line);min-width:0}
+.sum > div:last-child{border-right:0}
+.sum .kpi-val{font-size:22px}
+.sum .good{color:var(--ok)} .sum .badc{color:var(--bad)}
+@media (max-width:520px){.sum > div{padding:14px 12px}.sum .kpi-val{font-size:18px}}
+.result{display:grid;grid-template-columns:32px minmax(0,1fr);gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.result:last-child{border-bottom:0}
+.result-ic{width:32px;height:32px;border-radius:50%;display:grid;place-items:center}
+.result-ic .ic{width:16px;height:16px;stroke-width:2.6}
+.result.ok .result-ic{background:var(--ok-soft);color:var(--ok)}
+.result.bad .result-ic{background:var(--bad-soft);color:var(--bad)}
+.result.warn .result-ic{background:var(--warn-soft);color:var(--warn)}
+.result b{display:block;font-weight:600;margin:4px 0 2px}
+.result p{margin:0;font-size:14px;color:var(--ink-2)}
+.result .codes{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.code-chip{font:600 12px var(--mono);letter-spacing:.4px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;color:var(--ink)}
+
+/* ---------- history ---------- */
+.toolbar{display:grid;grid-template-columns:160px 160px minmax(0,1fr) auto;gap:12px;align-items:end;padding:16px 20px;border-bottom:1px solid var(--line)}
+@media (max-width:860px){.toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.toolbar .grow,.toolbar .btn{grid-column:1/-1}}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th{position:sticky;top:0;background:var(--surface-2);text-align:left;font-size:12px;font-weight:600;color:var(--ink-2);letter-spacing:.3px;text-transform:uppercase;padding:10px 16px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--surface-2)}
+td.mono{font:600 13px var(--mono);letter-spacing:.4px}
+td.r,th.r{text-align:right}
+td.c,th.c{text-align:center}
+.yes{color:var(--ok)} .no{color:var(--bad)}
+.yes .ic,.no .ic{width:16px;height:16px;stroke-width:2.6;vertical-align:middle}
+.pill{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;font-size:12px;font-weight:600}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.mute{background:var(--surface-2);color:var(--ink-3)}
+.table-foot{padding:12px 20px;font-size:13px;color:var(--ink-2);border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}
+
+/* ---------- settings ---------- */
+.settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;align-items:start}
+@media (max-width:860px){.settings-grid{grid-template-columns:minmax(0,1fr)}}
+.deal-row{display:grid;grid-template-columns:minmax(0,1fr) 120px 36px;gap:8px;align-items:center;margin-bottom:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.chip{display:inline-flex;align-items:center;gap:4px;height:36px;padding:0 4px 0 14px;border-radius:18px;background:var(--surface-2);border:1px solid var(--line);font-size:14px;font-weight:500}
+.chip button{width:28px;height:28px;border-radius:50%;border:0;background:none;color:var(--ink-3);cursor:pointer;display:grid;place-items:center}
+.chip button:hover{background:var(--line);color:var(--ink)}
+.chip .ic{width:14px;height:14px}
+.inline{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.btn-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:420px){.btn-pair{grid-template-columns:minmax(0,1fr)}}
+.muted-text{font-size:14px;color:var(--ink-2);margin:0 0 16px}
+
+/* ---------- toast ---------- */
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,16px);opacity:0;pointer-events:none;z-index:50;display:flex;align-items:center;gap:10px;max-width:min(560px,calc(100vw - 32px));padding:12px 16px;border-radius:10px;background:var(--bar);color:var(--bar-ink);font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.18);transition:opacity .2s,transform .2s}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast .ic{width:18px;height:18px}
+.toast.ok .ic{color:#42cf98} .toast.bad .ic{color:#ff7b7b} .toast.warn .ic{color:#f3b450}
+.banner{display:flex;gap:10px;align-items:center;background:var(--bad-soft);color:var(--bad);border-radius:var(--r);padding:12px 16px;font-size:14px;margin-bottom:20px}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div id="storageBanner" class="banner" hidden>This browser isn't letting the page save. Anything you log will be lost when you close it. Open the file in normal Chrome or Safari (not a private window).</div>
-  <header>
-    <h1>Voucher Desk<small id="dayLabel"></small></h1>
-    <div class="stats">
-      <div class="stat"><b id="sCount">0</b><span>vouchers tonight</span></div>
-      <div class="stat"><b id="sTotal">£0</b><span>to go through till</span></div>
-      <div class="stat" id="sOpenBox"><b id="sOpen">0</b><span>not finished</span></div>
-    </div>
-  </header>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 9a3 3 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a3 3 0 0 0 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"/><path d="M14 5v14" stroke-dasharray="2 2.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 5h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5z"/></symbol>
+</svg>
 
-  <nav>
-    <button data-tab="tonight" aria-current="true">Tonight</button>
-    <button data-tab="history">History and export</button>
-    <button data-tab="settings">Settings</button>
-  </nav>
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand"><span class="mark"><svg class="ic"><use href="#i-ticket"/></svg></span>Voucher Desk</div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" data-tab="tonight" aria-selected="true">Tonight<span class="count" id="tabCount" hidden></span></button>
+      <button class="tab" role="tab" data-tab="close" aria-selected="false">End of shift</button>
+      <button class="tab" role="tab" data-tab="history" aria-selected="false">History</button>
+      <button class="tab" role="tab" data-tab="settings" aria-selected="false">Settings</button>
+    </nav>
+    <div class="night" id="nightLabel"></div>
+  </div>
+</header>
 
-  <!-- TONIGHT -->
+<main>
+  <div id="storageBanner" class="banner" hidden><svg class="ic"><use href="#i-alert"/></svg>This browser isn't letting the page save, so anything logged will be lost. Open it in normal Chrome or Safari, not a private window.</div>
+
+  <!-- ================= TONIGHT ================= -->
   <section id="tab-tonight">
-    <div class="grid">
-      <div class="col">
-        <form class="card" id="addForm" autocomplete="off">
-          <h2>Add a voucher</h2>
-          <div class="field">
-            <label for="code">Voucher code</label>
-            <input id="code" required placeholder="Type or paste the code">
-            <div id="dupMsg"></div>
-          </div>
-          <div class="row2 field">
-            <div><label for="table">Table</label><input id="table" inputmode="numeric" placeholder="12"></div>
-            <div><label for="staff">Your name</label><select id="staff"></select></div>
-          </div>
-          <div class="row2 field">
-            <div><label for="deal">Deal</label><select id="deal"></select></div>
-            <div><label for="value">Till amount (£)</label><input id="value" type="number" step="0.01" min="0" inputmode="decimal"></div>
-          </div>
-          <div class="field"><label for="note">Note (optional)</label><input id="note" placeholder="Split with card, extra drinks, etc."></div>
-          <div class="field" style="display:flex;gap:8px;flex-wrap:wrap">
-            <button type="button" class="btn" id="copyOpen">Copy code and open itison</button>
-          </div>
-          <label style="display:flex;gap:8px;align-items:center;font-size:14px;color:var(--ink);font-weight:500;margin-bottom:12px">
-            <input type="checkbox" id="alreadyRedeemed" style="width:auto" checked> I've already redeemed it on itison
-          </label>
-          <button class="btn primary" type="submit">Log voucher</button>
-          <div id="addMsg"></div>
-          <p class="hint">The PIN goes into itison only. This page never asks for it or keeps it.</p>
-        </form>
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-label">Vouchers tonight</div><div class="kpi-val num" id="kCount">0</div></div>
+      <div class="kpi"><div class="kpi-label">Till amount</div><div class="kpi-val num" id="kTotal">£0</div></div>
+      <div class="kpi"><div class="kpi-label">Fully done</div><div class="kpi-val num" id="kDone">0</div></div>
+      <div class="kpi" id="kOpenBox"><div class="kpi-label"><span class="dot"></span>Needs finishing</div><div class="kpi-val num" id="kOpen">0</div></div>
+    </div>
 
-        <div class="card" id="closeCard">
-          <h2>End of shift check</h2>
-          <div class="field">
-            <label for="tillTotal">itison total on the till (from the Waiter Mate end-of-day report)</label>
-            <input id="tillTotal" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00">
+    <div class="layout">
+      <form class="panel sticky" id="addForm" autocomplete="off" novalidate>
+        <div class="panel-head"><h2>New voucher</h2><span class="sub">PIN is never stored</span></div>
+        <div class="panel-body">
+          <div class="notice" id="setupNotice" hidden><span>Add your team and deals first.</span><button type="button" class="btn sm" data-goto="settings">Open settings</button></div>
+          <div class="fields">
+            <div class="f full">
+              <label for="code">Voucher code</label>
+              <input class="input code" id="code" placeholder="Type or paste the code" spellcheck="false" autocapitalize="characters">
+              <div id="dupMsg" hidden></div>
+            </div>
+            <div class="f full">
+              <label for="deal">Deal</label>
+              <select class="select" id="deal"></select>
+            </div>
+            <div class="f">
+              <label for="value">Till amount</label>
+              <div class="money"><input class="input num" id="value" type="number" step="0.01" min="0" inputmode="decimal"></div>
+            </div>
+            <div class="f">
+              <label for="table">Table</label>
+              <input class="input" id="table" inputmode="numeric" placeholder="e.g. 12">
+            </div>
+            <div class="f full">
+              <label for="staff">Logged by</label>
+              <select class="select" id="staff"></select>
+            </div>
+            <div class="f full">
+              <label for="note">Note <span style="color:var(--ink-3);font-weight:400">optional</span></label>
+              <input class="input" id="note" placeholder="Split bill, extra drinks…">
+            </div>
+            <div class="f full">
+              <label class="switch"><input type="checkbox" id="alreadyRedeemed" checked><span class="track"></span>Already redeemed on itison</label>
+            </div>
           </div>
-          <div class="field">
-            <label for="hubPaste">Paste tonight's redemptions from the itison Hub (optional)</label>
-            <textarea id="hubPaste" placeholder="On the Hub's redemptions page: select all, copy, paste here. Any layout works."></textarea>
+          <div class="actions">
+            <button type="button" class="btn block" id="copyOpen"><svg class="ic"><use href="#i-copy"/></svg>Copy code and open itison</button>
+            <button type="submit" class="btn primary block lg">Log voucher</button>
           </div>
-          <div class="row2 field">
-            <div><label for="closer">Checked by</label><select id="closer"></select></div>
-            <div style="display:flex;align-items:end"><button class="btn" type="button" id="runCheck" style="width:100%">Run the check</button></div>
-          </div>
-          <div id="checkOut" class="check-out"></div>
         </div>
-      </div>
+      </form>
 
-      <div class="col">
-        <div class="card open-card" id="openCard" hidden>
-          <h2>Not finished</h2>
-          <div class="list" id="openList"></div>
+      <div class="panel list-panel">
+        <div class="panel-head"><h2>Tonight's vouchers</h2><span class="sub num" id="listSub"></span></div>
+        <div id="openGroup" hidden>
+          <div class="group-label attn"><span class="dot"></span>Needs finishing<span class="n" id="openN"></span></div>
+          <div id="openList"></div>
         </div>
-        <div class="card">
-          <h2>Tonight</h2>
-          <div class="list" id="tonightList"></div>
+        <div id="doneGroup" hidden>
+          <div class="group-label">Done<span class="n" id="doneN"></span></div>
+          <div id="doneList"></div>
+        </div>
+        <div id="listEmpty" class="empty">
+          <svg class="ic"><use href="#i-inbox"/></svg>
+          <strong>No vouchers yet tonight</strong>
+          <p>Log one with the form. It shows up here with its three steps, and stays under Needs finishing until all three are ticked.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- HISTORY -->
+  <!-- ================= END OF SHIFT ================= -->
+  <section id="tab-close" hidden>
+    <div class="page-head"><div><h1>End of shift check</h1><p>Compare tonight's log with the till and itison before you cash up.</p></div></div>
+    <div class="close-layout">
+      <div class="panel">
+        <div class="panel-head"><h2>Enter tonight's figures</h2></div>
+        <div class="panel-body">
+          <div class="fields">
+            <div class="f full">
+              <label for="tillTotal">itison total on the till</label>
+              <div class="money"><input class="input num" id="tillTotal" type="number" step="0.01" min="0" inputmode="decimal" placeholder="0.00"></div>
+              <p class="help">From the Waiter Mate end-of-day report.</p>
+            </div>
+            <div class="f full">
+              <label for="hubPaste">itison Hub redemptions <span style="color:var(--ink-3);font-weight:400">optional</span></label>
+              <textarea class="textarea" id="hubPaste" placeholder="On the Hub's redemptions page: select all, copy, paste here. Any layout works."></textarea>
+            </div>
+            <div class="f full">
+              <label for="closer">Checked by</label>
+              <select class="select" id="closer"></select>
+            </div>
+          </div>
+          <div class="actions"><button class="btn primary block lg" type="button" id="runCheck">Run the check</button></div>
+        </div>
+      </div>
+      <div class="panel" id="checkPanel">
+        <div class="panel-head"><h2>Result</h2><span class="sub" id="checkWhen"></span></div>
+        <div id="checkOut">
+          <div class="panel-body">
+            <ol class="steps-guide">
+              <li><div><b>Print the end-of-day report</b>Find the itison line on the Waiter Mate report and enter its total.</div></li>
+              <li><div><b>Copy the Hub list (optional)</b>Copy tonight's redemptions from the itison Hub. Any logged code that isn't in it gets flagged.</div></li>
+              <li><div><b>Run the check</b>The result shows any voucher with a missing step, and it's saved to History.</div></li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= HISTORY ================= -->
   <section id="tab-history" hidden>
-    <div class="card">
-      <div class="toolbar">
-        <div><label for="hFrom">From</label><input type="date" id="hFrom"></div>
-        <div><label for="hTo">To</label><input type="date" id="hTo"></div>
-        <div style="flex:1;min-width:160px"><label for="hSearch">Search code, table or name</label><input id="hSearch"></div>
-        <button class="btn" id="csvBtn" type="button">Download as spreadsheet (CSV)</button>
+    <div class="page-head"><div><h1>History</h1><p>Every voucher logged on this device. Download it to open in Excel.</p></div></div>
+    <div class="stack">
+      <div class="panel">
+        <div class="toolbar">
+          <div class="f"><label for="hFrom">From</label><input class="input" type="date" id="hFrom"></div>
+          <div class="f"><label for="hTo">To</label><input class="input" type="date" id="hTo"></div>
+          <div class="f grow"><label for="hSearch">Search</label><input class="input" id="hSearch" placeholder="Code, table, name or note"></div>
+          <button class="btn" id="csvBtn" type="button"><svg class="ic"><use href="#i-download"/></svg>Download CSV</button>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Night</th><th>Time</th><th>Code</th><th>Table</th><th>Deal</th><th class="r">Amount</th><th>Logged by</th><th class="c">itison</th><th class="c">Till</th><th class="c">Receipt</th><th></th></tr></thead>
+          <tbody id="hBody"></tbody>
+        </table></div>
+        <div class="table-foot"><span id="hSummary"></span><span id="hTotal" class="num"></span></div>
       </div>
-      <p class="hint" id="hSummary" style="margin:0 0 10px"></p>
-      <div class="scroll"><table>
-        <thead><tr><th>Night</th><th>Time</th><th>Code</th><th>Table</th><th>Deal</th><th>£</th><th>Who</th><th>itison</th><th>Till</th><th>Receipt</th><th></th></tr></thead>
-        <tbody id="hBody"></tbody>
-      </table></div>
-      <h2 style="margin-top:24px">End of shift checks</h2>
-      <div class="scroll"><table>
-        <thead><tr><th>Night</th><th>Checked by</th><th>Logged</th><th>Till said</th><th>Difference</th><th>Hub codes missing</th></tr></thead>
-        <tbody id="cBody"></tbody>
-      </table></div>
+      <div class="panel">
+        <div class="panel-head"><h2>End of shift checks</h2></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Night</th><th>Checked by</th><th class="r">Logged</th><th class="r">Till</th><th>Till check</th><th>itison check</th></tr></thead>
+          <tbody id="cBody"></tbody>
+        </table></div>
+      </div>
     </div>
   </section>
 
-  <!-- SETTINGS -->
+  <!-- ================= SETTINGS ================= -->
   <section id="tab-settings" hidden>
-    <div class="grid">
-      <div class="col">
-        <div class="card">
-          <h2>Deals</h2>
-          <p class="hint" style="margin:0 0 10px">The till amount for each deal. Picking a deal fills in the amount.</p>
-          <div id="dealRows"></div>
-          <button class="btn small" id="addDeal" type="button">Add a deal</button>
+    <div class="page-head"><div><h1>Settings</h1><p>Saved on this device only.</p></div></div>
+    <div class="settings-grid">
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><h2>Deals</h2><button class="btn sm" id="addDeal" type="button"><svg class="ic"><use href="#i-plus"/></svg>Add deal</button></div>
+          <div class="panel-body">
+            <p class="muted-text">What each deal goes through the till as. Picking a deal fills in the amount.</p>
+            <div class="deal-row" style="margin-bottom:6px"><span class="lbl">Name</span><span class="lbl">Till amount</span><span></span></div>
+            <div id="dealRows"></div>
+          </div>
         </div>
-        <div class="card">
-          <h2>Staff</h2>
-          <div class="chips" id="staffChips"></div>
-          <div style="display:flex;gap:8px"><input id="newStaff" placeholder="Name"><button class="btn" id="addStaff" type="button">Add</button></div>
+        <div class="panel">
+          <div class="panel-head"><h2>Team</h2></div>
+          <div class="panel-body">
+            <div class="chips" id="staffChips"></div>
+            <div class="inline"><input class="input" id="newStaff" placeholder="Add a name" aria-label="New team member"><button class="btn" id="addStaff" type="button">Add</button></div>
+          </div>
         </div>
       </div>
-      <div class="col">
-        <div class="card">
-          <h2>itison link</h2>
-          <label for="hubUrl">The page you redeem codes on</label>
-          <input id="hubUrl" placeholder="https://…">
-          <p class="hint">Copy it from the laptop's address bar while you're on the itison redemption page.</p>
-        </div>
-        <div class="card">
-          <h2>Backup</h2>
-          <p class="hint" style="margin:0 0 10px" id="backupInfo"></p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn" id="backupBtn" type="button">Download backup</button>
-            <label class="btn" style="margin:0;font-size:14px;color:var(--ink)">Restore from backup<input type="file" id="restoreFile" accept=".json" hidden></label>
+      <div class="stack">
+        <div class="panel">
+          <div class="panel-head"><h2>itison link</h2></div>
+          <div class="panel-body">
+            <div class="f">
+              <label for="hubUrl">Redemption page address</label>
+              <input class="input" id="hubUrl" placeholder="https://" inputmode="url" spellcheck="false">
+              <p class="help">Copy it from the laptop's address bar while you're on the itison redemption page.</p>
+            </div>
           </div>
-          <div id="restoreMsg"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Backup</h2></div>
+          <div class="panel-body">
+            <p class="muted-text" id="backupInfo"></p>
+            <div class="btn-pair">
+              <button class="btn" id="backupBtn" type="button"><svg class="ic"><use href="#i-download"/></svg>Download backup</button>
+              <label class="btn" for="restoreFile"><svg class="ic"><use href="#i-upload"/></svg>Restore backup</label>
+              <input type="file" id="restoreFile" accept=".json" class="sr">
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </section>
-</div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><svg class="ic"><use href="#i-check"/></svg><span></span></div>
 
 <script>
 (function(){
-const KEY = 'voucherDesk.v1';
-const DAY_START_HOUR = 5; // a "night" runs 5am to 5am, so a 1am close still counts as the night before
-const STEPS = [['itison','Redeemed on itison'],['till','Put through till'],['receipt','Receipt in till']];
+const KEY = 'voucherDesk.v1';           // never rename: the host laptop's log lives here
+const DAY_START_HOUR = 5;               // a "night" runs 5am to 5am
+const STEPS = [['itison','itison','Redeemed on itison'],['till','Till','Put through the till'],['receipt','Receipt','Receipt in the till']];
 
 let storageOK = true;
-let state = load() || {
-  vouchers: [],
-  checks: [],
-  settings: {
-    deals: [{name:'Example deal (change in Settings)', value:30}],
-    staff: [],
-    hubUrl: ''
-  },
-  lastBackup: null
-};
+let state = load() || { vouchers: [], checks: [], settings: { deals: [{name:'Example deal (edit in Settings)', value:30}], staff: [], hubUrl: '' }, lastBackup: null };
 if (!state.checks) state.checks = [];
 
 function load(){ try { const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; } catch(e){ storageOK = false; return null; } }
-function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){ storageOK = false; } document.getElementById('storageBanner').hidden = storageOK; }
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){ storageOK = false; } $('storageBanner').hidden = storageOK; }
 function pref(k, v){ try { if (v === undefined) return localStorage.getItem('voucherDesk.'+k); localStorage.setItem('voucherDesk.'+k, v); } catch(e){ return null; } }
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const icon = (n, cls='') => `<svg class="ic ${cls}"><use href="#i-${n}"/></svg>`;
 const norm = c => String(c||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
 const money = n => '£' + (Math.round((+n||0)*100)/100).toFixed(2).replace(/\.00$/,'');
 const pad = n => String(n).padStart(2,'0');
@@ -261,39 +484,58 @@ const timeOf = ts => new Date(ts).toLocaleTimeString('en-GB',{hour:'2-digit',min
 const live = () => state.vouchers.filter(v => !v.deleted);
 const isDone = v => STEPS.every(([k]) => v.steps[k]);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const plural = (n, one, many) => n === 1 ? one : (many || one + 's');
 
-/* ---------- tabs ---------- */
-document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
-function showTab(t){
-  document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-current', b.dataset.tab===t));
-  ['tonight','history','settings'].forEach(x => $('tab-'+x).hidden = x!==t);
-  if (t==='history') renderHistory();
-  if (t==='settings') renderSettings();
+/* ---------- toast ---------- */
+function toast(text, kind='ok'){
+  const t = $('toast');
+  t.className = 'toast ' + kind;
+  t.querySelector('use').setAttribute('href', kind === 'ok' ? '#i-check' : '#i-alert');
+  t.querySelector('span').textContent = text;
+  requestAnimationFrame(() => t.classList.add('show'));
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 3800);
 }
+
+/* ---------- tabs (hash so a tab can be bookmarked) ---------- */
+const TABS = ['tonight','close','history','settings'];
+function showTab(t){
+  if (!TABS.includes(t)) t = 'tonight';
+  document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+  TABS.forEach(x => $('tab-'+x).hidden = x !== t);
+  if (t === 'history') renderHistory();
+  if (t === 'settings') renderSettings();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { history.replaceState(null,'','#'+b.dataset.tab); showTab(b.dataset.tab); }));
+document.addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if (g) { history.replaceState(null,'','#'+g.dataset.goto); showTab(g.dataset.goto); } });
+window.addEventListener('hashchange', () => showTab(location.hash.slice(1)));
 
 /* ---------- selects ---------- */
 function fillSelects(){
-  const staff = state.settings.staff;
-  const opts = (staff.length ? staff : []).map(s => `<option>${esc(s)}</option>`).join('');
-  const none = '<option value="">Add names in Settings</option>';
-  const last = pref('lastStaff');
+  const staff = state.settings.staff, last = pref('lastStaff');
   for (const id of ['staff','closer']) {
-    $(id).innerHTML = staff.length ? opts : none;
+    $(id).innerHTML = staff.length ? staff.map(s => `<option>${esc(s)}</option>`).join('') : '<option value="">Add names in Settings</option>';
     if (last && staff.includes(last)) $(id).value = last;
   }
+  const keep = $('deal').value;
   $('deal').innerHTML = state.settings.deals.map((d,i) => `<option value="${i}">${esc(d.name)} · ${money(d.value)}</option>`).join('') + '<option value="custom">Other amount</option>';
+  if (keep && [...$('deal').options].some(o => o.value === keep)) $('deal').value = keep;
   if (!$('value').value) syncDeal();
+  $('setupNotice').hidden = staff.length > 0;
 }
 function syncDeal(){ const d = state.settings.deals[$('deal').value]; if (d) $('value').value = d.value; }
 $('deal').addEventListener('change', syncDeal);
 $('staff').addEventListener('change', e => pref('lastStaff', e.target.value));
 
 /* ---------- duplicate check ---------- */
-$('code').addEventListener('input', () => {
+function dupCheck(){
   const n = norm($('code').value);
   const hit = n.length >= 4 && live().find(v => norm(v.code) === n);
-  $('dupMsg').innerHTML = hit ? `<div class="msg bad">Already logged on ${niceNight(hit.night)} at ${timeOf(hit.at)} by ${esc(hit.staff||'someone')}, table ${esc(hit.table||'?')}. Don't redeem it twice.</div>` : '';
-});
+  $('dupMsg').hidden = !hit;
+  $('dupMsg').innerHTML = hit ? `<div class="field-alert">${icon('alert')}<span>Already logged ${niceNight(hit.night)} at ${timeOf(hit.at)} by ${esc(hit.staff||'someone')}, table ${esc(hit.table||'?')}. Don't redeem it twice.</span></div>` : '';
+  return hit;
+}
+$('code').addEventListener('input', dupCheck);
 
 /* ---------- copy + open itison ---------- */
 $('copyOpen').addEventListener('click', async () => {
@@ -301,24 +543,21 @@ $('copyOpen').addEventListener('click', async () => {
   let copied = false;
   if (code) { try { await navigator.clipboard.writeText(code); copied = true; } catch(e){ $('code').select(); } }
   const url = state.settings.hubUrl;
-  if (!url) { flash('addMsg','warn', (copied?'Code copied. ':'') + 'Add the itison link in Settings so this button can open it.'); return; }
+  if (!url) { toast((copied ? 'Code copied. ' : '') + 'Add the itison link in Settings so this button can open it.', 'warn'); return; }
   window.open(url, '_blank', 'noopener');
-  flash('addMsg','good', copied ? 'Code copied. Paste it into itison, then come back and log it.' : 'itison opened.');
+  toast(copied ? 'Code copied. Paste it into itison, then come back and log it.' : 'itison opened in a new tab.');
 });
 
-function flash(id, kind, text){ $(id).innerHTML = `<div class="msg ${kind}">${esc(text)}</div>`; }
-
 /* ---------- add ---------- */
-let justAdded = null;
+let flashId = null;
 $('addForm').addEventListener('submit', e => {
   e.preventDefault();
   const code = $('code').value.trim().toUpperCase();
-  if (!code) { flash('addMsg','bad','Enter the voucher code first.'); return; }
-  if (live().some(v => norm(v.code) === norm(code))) { flash('addMsg','bad','That code is already logged. Check the list before redeeming it again.'); return; }
+  if (!code) { toast('Enter the voucher code first.', 'bad'); $('code').focus(); return; }
+  if (dupCheck()) { toast('That code is already logged. Check before redeeming it again.', 'bad'); return; }
   const value = parseFloat($('value').value);
-  if (!(value >= 0)) { flash('addMsg','bad','Enter the till amount.'); return; }
-  const dealSel = $('deal').value;
-  const now = Date.now();
+  if (!(value >= 0)) { toast('Enter the till amount.', 'bad'); $('value').focus(); return; }
+  const dealSel = $('deal').value, now = Date.now();
   const v = {
     id: uid(), code, at: now, night: nightOf(now),
     table: $('table').value.trim(),
@@ -326,73 +565,86 @@ $('addForm').addEventListener('submit', e => {
     value, staff: $('staff').value, note: $('note').value.trim(),
     steps: { itison: $('alreadyRedeemed').checked ? now : null, till: null, receipt: null }
   };
-  state.vouchers.push(v); justAdded = v.id; setTimeout(() => { justAdded = null; }, 1500); save();
-  $('code').value = ''; $('table').value = ''; $('note').value = ''; $('dupMsg').innerHTML = '';
-  flash('addMsg','good', `Logged ${code}. Now put ${money(value)} through the till as itison and tick it off.`);
+  state.vouchers.push(v); save();
+  flashId = v.id; setTimeout(() => { flashId = null; }, 1500);
+  $('code').value = ''; $('table').value = ''; $('note').value = ''; dupCheck();
+  toast(`Logged ${code}. Put ${money(value)} through the till as itison.`);
   render(); $('code').focus();
 });
 
 /* ---------- list rows ---------- */
-function rowHTML(v, showNight){
-  const steps = STEPS.map(([k,label]) =>
-    `<button type="button" class="step" data-id="${v.id}" data-step="${k}" aria-pressed="${!!v.steps[k]}" title="${v.steps[k] ? 'Done at '+timeOf(v.steps[k])+'. Tap to undo' : 'Tap when done'}">${label}</button>`).join('');
-  return `<div class="v ${isDone(v)?'done':''} ${v.id===justAdded?'new':''}">
-    <div>
-      <div class="code">${esc(v.code)}</div>
-      <div class="meta">${showNight ? niceNight(v.night)+' · ' : ''}${timeOf(v.at)} · table ${esc(v.table||'?')} · ${esc(v.staff||'no name')}${v.deal ? ' · '+esc(v.deal) : ''}${v.note ? ' · '+esc(v.note) : ''}</div>
+function rowHTML(v){
+  const steps = STEPS.map(([k,short,full]) =>
+    `<button type="button" class="tog" data-id="${v.id}" data-step="${k}" aria-pressed="${!!v.steps[k]}" title="${full}${v.steps[k] ? ': done at '+timeOf(v.steps[k])+'. Tap to undo' : ': tap when done'}">${icon('check','on')}${icon('circle','off')}${short}</button>`).join('');
+  const older = v.night !== tonight() ? `<span class="older">${niceNight(v.night)}</span>` : '';
+  return `<div class="vrow ${isDone(v)?'done':''} ${v.id===flashId?'flash':''}">
+    <div class="vmain">
+      <div class="vcode">${esc(v.code)}</div>
+      <div class="vmeta">${older}<span>Table ${esc(v.table||'–')}</span><span>${esc(v.staff||'No name')}</span><span>${timeOf(v.at)}</span>${v.deal ? `<span>${esc(v.deal)}</span>` : ''}${v.note ? `<span>${esc(v.note)}</span>` : ''}</div>
     </div>
-    <div class="val">${money(v.value)}</div>
-    <div class="steps">${steps}<span style="flex:1"></span><button type="button" class="btn link" data-del="${v.id}">Remove</button></div>
+    <div class="vamt">${money(v.value)}</div>
+    <div class="vsteps" role="group" aria-label="Steps for ${esc(v.code)}">${steps}</div>
+    <div class="vdel"><button type="button" class="icon-btn" data-del="${v.id}" aria-label="Remove ${esc(v.code)}" title="Remove">${icon('trash')}</button></div>
   </div>`;
 }
 
 document.addEventListener('click', e => {
-  const s = e.target.closest('.step');
-  if (s) { const v = state.vouchers.find(x => x.id === s.dataset.id); v.steps[s.dataset.step] = v.steps[s.dataset.step] ? null : Date.now(); justAdded = null; save(); render(); return; }
+  const s = e.target.closest('.tog');
+  if (s) { const v = state.vouchers.find(x => x.id === s.dataset.id); v.steps[s.dataset.step] = v.steps[s.dataset.step] ? null : Date.now(); save(); render(); if (isDone(v)) toast(`${v.code} is all done.`); return; }
   const d = e.target.closest('[data-del]');
   if (d) {
-    if (d.dataset.armed) { const v = state.vouchers.find(x => x.id === d.dataset.del); v.deleted = Date.now(); save(); render(); if (!$('tab-history').hidden) renderHistory(); }
-    else { d.dataset.armed = '1'; d.textContent = 'Tap again to remove'; d.style.color = 'var(--bad)'; setTimeout(() => { if (d.isConnected) { delete d.dataset.armed; d.textContent = 'Remove'; d.style.color=''; } }, 3000); }
+    if (d.dataset.armed) {
+      const v = state.vouchers.find(x => x.id === d.dataset.del); v.deleted = Date.now(); save(); render();
+      if (!$('tab-history').hidden) renderHistory();
+      toast(`Removed ${v.code}.`, 'warn');
+    } else {
+      d.dataset.armed = '1'; d.classList.add('armed'); d.textContent = 'Remove?';
+      setTimeout(() => { if (d.isConnected && d.dataset.armed) { delete d.dataset.armed; d.classList.remove('armed'); d.innerHTML = icon('trash'); } }, 3000);
+    }
   }
 });
 
 /* ---------- render tonight ---------- */
 function render(){
   const n = tonight();
-  $('dayLabel').textContent = 'Night of ' + new Date(n+'T12:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
-  const t = live().filter(v => v.night === n).sort((a,b) => b.at - a.at);
+  $('nightLabel').textContent = 'Night of ' + niceNight(n);
+  const t = live().filter(v => v.night === n);
   const open = live().filter(v => !isDone(v)).sort((a,b) => a.at - b.at);
-  $('sCount').textContent = t.length;
-  $('sTotal').textContent = money(t.reduce((s,v) => s + v.value, 0));
-  $('sOpen').textContent = open.length;
-  $('sOpenBox').classList.toggle('warn', open.length > 0);
-  $('openCard').hidden = !open.length;
-  $('openList').innerHTML = open.map(v => rowHTML(v, v.night !== n)).join('');
-  const doneTonight = t.filter(isDone);
-  $('tonightList').innerHTML = doneTonight.length ? doneTonight.map(v => rowHTML(v,false)).join('')
-    : `<p class="empty">${t.length ? 'Nothing fully finished yet. Vouchers move here once all three steps are ticked.' : 'No vouchers yet tonight. Log one on the left and it shows up here with its three steps to tick.'}</p>`;
-  document.getElementById('storageBanner').hidden = storageOK;
+  const done = t.filter(isDone).sort((a,b) => b.at - a.at);
+  $('kCount').textContent = t.length;
+  $('kTotal').textContent = money(t.reduce((s,v) => s + v.value, 0));
+  $('kDone').textContent = done.length;
+  $('kOpen').textContent = open.length;
+  $('kOpenBox').classList.toggle('attn', open.length > 0);
+  $('tabCount').hidden = !open.length; $('tabCount').textContent = open.length;
+  $('listSub').textContent = t.length ? `${t.length} ${plural(t.length,'voucher')} · ${money(t.reduce((s,v)=>s+v.value,0))}` : '';
+  $('openGroup').hidden = !open.length; $('openN').textContent = open.length;
+  $('openList').innerHTML = open.map(rowHTML).join('');
+  $('doneGroup').hidden = !done.length; $('doneN').textContent = done.length;
+  $('doneList').innerHTML = done.map(rowHTML).join('');
+  $('listEmpty').hidden = open.length + done.length > 0;
+  $('storageBanner').hidden = storageOK;
 }
 
 /* ---------- end of shift check ---------- */
+function resultHTML(kind, title, text, codes){
+  const ic = kind === 'ok' ? 'check' : kind === 'bad' ? 'x' : 'alert';
+  return `<div class="result ${kind}"><div class="result-ic">${icon(ic)}</div><div><b>${title}</b>${text ? `<p>${text}</p>` : ''}${codes && codes.length ? `<div class="codes">${codes.map(v => `<span class="code-chip">${esc(v.code)} · T${esc(v.table||'?')} · ${money(v.value)}</span>`).join('')}</div>` : ''}</div></div>`;
+}
 $('runCheck').addEventListener('click', () => {
   const n = tonight();
   const t = live().filter(v => v.night === n);
   const logged = t.reduce((s,v) => s + v.value, 0);
   const tillRaw = $('tillTotal').value.trim();
+  if (!t.length && !tillRaw) { toast('Nothing logged tonight and no till total entered.', 'warn'); return; }
+  const till = tillRaw === '' ? null : parseFloat(tillRaw);
+  const diff = till == null ? null : Math.round((till - logged)*100)/100;
   const out = [];
-  if (!t.length && !tillRaw) { $('checkOut').innerHTML = '<div class="msg warn">Nothing logged tonight and no till total entered.</div>'; return; }
 
-  let diff = null;
-  if (tillRaw !== '') {
-    const till = parseFloat(tillRaw);
-    diff = Math.round((till - logged)*100)/100;
-    if (diff === 0) out.push(`<div class="msg good">Till and log match: ${money(logged)} from ${t.length} voucher${t.length===1?'':'s'}.</div>`);
-    else if (diff < 0) {
-      const notTill = t.filter(v => !v.steps.till);
-      out.push(`<div class="msg bad">Till is ${money(-diff)} short of the log. A voucher was probably redeemed but never put through the till.${notTill.length ? ' Not ticked as through the till: '+notTill.map(v => esc(v.code)+' (table '+esc(v.table||'?')+', '+money(v.value)+')').join(', ')+'.' : ''}</div>`);
-    } else out.push(`<div class="msg bad">Till has ${money(diff)} more than the log. Something went through the till as itison without being logged, or went through twice.</div>`);
-  } else out.push('<div class="msg warn">Add the till\'s itison total to compare against the log.</div>');
+  if (diff === null) out.push(resultHTML('warn','Till not checked','Enter the itison total from the Waiter Mate report to compare it with the log.'));
+  else if (diff === 0) out.push(resultHTML('ok','Till matches the log',`${money(logged)} from ${t.length} ${plural(t.length,'voucher')}.`));
+  else if (diff < 0) out.push(resultHTML('bad',`Till is ${money(-diff)} short`,'A voucher was probably redeemed but never put through the till. Not ticked as through the till:', t.filter(v => !v.steps.till)));
+  else out.push(resultHTML('bad',`Till is ${money(diff)} over`,'Something went through the till as itison without being logged, or went through twice.'));
 
   let missing = null;
   const paste = $('hubPaste').value;
@@ -400,18 +652,25 @@ $('runCheck').addEventListener('click', () => {
     const hay = norm(paste);
     const notFound = t.filter(v => !hay.includes(norm(v.code)));
     missing = notFound.length;
-    if (!notFound.length) out.push(`<div class="msg good">All ${t.length} logged codes appear in the itison Hub paste.</div>`);
-    else out.push(`<div class="msg bad">${notFound.length} logged code${notFound.length===1?' is':'s are'} not in the itison Hub paste, so itison won't pay for ${notFound.length===1?'it':'them'} until ${notFound.length===1?"it's":"they're"} redeemed: ${notFound.map(v => esc(v.code)+' (table '+esc(v.table||'?')+')').join(', ')}.</div>`);
-  }
+    out.push(notFound.length
+      ? resultHTML('bad',`${notFound.length} ${plural(notFound.length,'code')} missing from itison`,`itison won't pay for ${notFound.length===1?'it':'them'} until ${notFound.length===1?"it's":"they're"} redeemed on the Hub:`, notFound)
+      : resultHTML('ok','Every code is on itison',`All ${t.length} logged ${plural(t.length,'code')} appear in the Hub list.`));
+  } else out.push(resultHTML('warn','itison not checked','Paste the Hub redemptions list to make sure every voucher will be paid.'));
 
   const open = t.filter(v => !isDone(v));
-  if (open.length) out.push(`<div class="msg warn">${open.length} voucher${open.length===1?' still has':'s still have'} steps not ticked. They're in Not finished.</div>`);
+  if (open.length) out.push(resultHTML('warn',`${open.length} ${plural(open.length,'voucher')} with steps not ticked`,'They stay under Needs finishing on the Tonight tab.', open));
+
+  const sumCls = diff === null ? '' : diff === 0 ? 'good' : 'badc';
+  $('checkOut').innerHTML = `<div class="sum">
+      <div><div class="kpi-label">Logged</div><div class="kpi-val num">${money(logged)}</div></div>
+      <div><div class="kpi-label">Till</div><div class="kpi-val num">${till == null ? '–' : money(till)}</div></div>
+      <div><div class="kpi-label">Difference</div><div class="kpi-val num ${sumCls}">${diff == null ? '–' : diff === 0 ? '£0' : (diff > 0 ? '+' : '−') + money(Math.abs(diff))}</div></div>
+    </div>` + out.join('');
+  $('checkWhen').textContent = 'Saved ' + timeOf(Date.now());
 
   state.checks = state.checks.filter(c => c.night !== n);
-  state.checks.push({ night:n, at:Date.now(), by:$('closer').value, logged, till: tillRaw===''?null:parseFloat(tillRaw), diff, missing });
+  state.checks.push({ night:n, at:Date.now(), by:$('closer').value, logged, till, diff, missing });
   save();
-  out.push('<p class="hint">Saved to History. Re-run it any time tonight and it replaces this one.</p>');
-  $('checkOut').innerHTML = out.join('');
 });
 
 /* ---------- history ---------- */
@@ -423,12 +682,14 @@ function historyRows(){
 }
 function renderHistory(){
   const rows = historyRows();
-  const tick = ts => ts ? timeOf(ts) : '<span style="color:var(--bad)">no</span>';
-  $('hBody').innerHTML = rows.map(v => `<tr><td>${niceNight(v.night)}</td><td>${timeOf(v.at)}</td><td class="c">${esc(v.code)}</td><td>${esc(v.table)}</td><td>${esc(v.deal)}</td><td>${money(v.value)}</td><td>${esc(v.staff)}</td><td>${tick(v.steps.itison)}</td><td>${tick(v.steps.till)}</td><td>${tick(v.steps.receipt)}</td><td><button type="button" class="btn link" data-del="${v.id}">Remove</button></td></tr>`).join('')
-    || '<tr><td colspan="11" class="empty">No vouchers match.</td></tr>';
-  $('hSummary').textContent = `${rows.length} voucher${rows.length===1?'':'s'} · ${money(rows.reduce((s,v)=>s+v.value,0))}`;
-  $('cBody').innerHTML = [...state.checks].sort((a,b) => b.at - a.at).map(c => `<tr><td>${niceNight(c.night)}</td><td>${esc(c.by)}</td><td>${money(c.logged)}</td><td>${c.till==null?'–':money(c.till)}</td><td style="color:${c.diff?'var(--bad)':'var(--good)'}">${c.diff==null?'–':c.diff===0?'matched':(c.diff>0?'+':'−')+money(Math.abs(c.diff))}</td><td>${c.missing==null?'not checked':c.missing}</td></tr>`).join('')
-    || '<tr><td colspan="6" class="empty">No checks yet.</td></tr>';
+  const tick = ts => ts ? `<span class="yes" title="${timeOf(ts)}">${icon('check')}</span>` : `<span class="no" title="Not done">${icon('x')}</span>`;
+  $('hBody').innerHTML = rows.map(v => `<tr><td>${niceNight(v.night)}</td><td class="num">${timeOf(v.at)}</td><td class="mono">${esc(v.code)}</td><td>${esc(v.table)}</td><td>${esc(v.deal)}</td><td class="r num">${money(v.value)}</td><td>${esc(v.staff)}</td><td class="c">${tick(v.steps.itison)}</td><td class="c">${tick(v.steps.till)}</td><td class="c">${tick(v.steps.receipt)}</td><td class="r"><button type="button" class="icon-btn" data-del="${v.id}" aria-label="Remove ${esc(v.code)}" title="Remove">${icon('trash')}</button></td></tr>`).join('')
+    || `<tr><td colspan="11"><div class="empty"><strong>No vouchers match</strong><p>Try a wider date range or a different search.</p></div></td></tr>`;
+  $('hSummary').textContent = `${rows.length} ${plural(rows.length,'voucher')}`;
+  $('hTotal').textContent = money(rows.reduce((s,v)=>s+v.value,0));
+  const pill = (ok, okText, badText) => ok == null ? '<span class="pill mute">Not checked</span>' : ok ? `<span class="pill ok">${okText}</span>` : `<span class="pill bad">${badText}</span>`;
+  $('cBody').innerHTML = [...state.checks].sort((a,b) => b.at - a.at).map(c => `<tr><td>${niceNight(c.night)}</td><td>${esc(c.by)||'–'}</td><td class="r num">${money(c.logged)}</td><td class="r num">${c.till==null?'–':money(c.till)}</td><td>${pill(c.diff==null?null:c.diff===0,'Matched',(c.diff>0?'+':'−')+money(Math.abs(c.diff||0)))}</td><td>${pill(c.missing==null?null:c.missing===0,'All on itison',`${c.missing} missing`)}</td></tr>`).join('')
+    || `<tr><td colspan="6"><div class="empty"><strong>No checks yet</strong><p>Run one from the End of shift tab and it's saved here.</p></div></td></tr>`;
 }
 function download(name, text, type){
   const a = document.createElement('a');
@@ -439,20 +700,22 @@ function download(name, text, type){
 $('csvBtn').addEventListener('click', () => {
   const q = s => '"' + String(s ?? '').replace(/"/g,'""') + '"';
   const t = ts => ts ? new Date(ts).toLocaleString('en-GB') : '';
-  const lines = [['Night','Logged at','Code','Table','Deal','Till amount','Staff','Redeemed on itison','Put through till','Receipt in till','Note'].map(q).join(',')];
+  const lines = [['Night','Logged at','Code','Table','Deal','Till amount','Logged by','Redeemed on itison','Put through till','Receipt in till','Note'].map(q).join(',')];
   historyRows().slice().reverse().forEach(v => lines.push([v.night, t(v.at), v.code, v.table, v.deal, v.value.toFixed(2), v.staff, t(v.steps.itison), t(v.steps.till), t(v.steps.receipt), v.note].map(q).join(',')));
   download(`itison-vouchers-${tonight()}.csv`, lines.join('\r\n'), 'text/csv');
+  toast('Spreadsheet downloaded.');
 });
 
 /* ---------- settings ---------- */
 function renderSettings(){
-  $('dealRows').innerHTML = state.settings.deals.map((d,i) => `<div class="setrow">
-    <input data-deal-name="${i}" value="${esc(d.name)}" aria-label="Deal name">
-    <input data-deal-val="${i}" type="number" step="0.01" min="0" value="${d.value}" aria-label="Till amount">
-    <button class="btn small" type="button" data-deal-del="${i}">Remove</button></div>`).join('');
-  $('staffChips').innerHTML = state.settings.staff.map((s,i) => `<span class="chip">${esc(s)}<button type="button" data-staff-del="${i}" aria-label="Remove ${esc(s)}">×</button></span>`).join('') || '<span class="hint">No names yet.</span>';
+  $('dealRows').innerHTML = state.settings.deals.map((d,i) => `<div class="deal-row">
+    <input class="input" data-deal-name="${i}" value="${esc(d.name)}" aria-label="Deal name">
+    <div class="money"><input class="input num" data-deal-val="${i}" type="number" step="0.01" min="0" value="${d.value}" aria-label="Till amount"></div>
+    <button class="icon-btn" type="button" data-deal-del="${i}" aria-label="Remove ${esc(d.name)}">${icon('trash')}</button></div>`).join('')
+    || '<p class="help">No deals yet. Add one so the amount fills itself in.</p>';
+  $('staffChips').innerHTML = state.settings.staff.map((s,i) => `<span class="chip">${esc(s)}<button type="button" data-staff-del="${i}" aria-label="Remove ${esc(s)}">${icon('x')}</button></span>`).join('') || '<span class="help">No names yet.</span>';
   $('hubUrl').value = state.settings.hubUrl || '';
-  $('backupInfo').textContent = `${live().length} vouchers saved on this laptop only. ` + (state.lastBackup ? `Last backup ${new Date(state.lastBackup).toLocaleDateString('en-GB')}.` : 'Never backed up.') + ' Download a backup once a week in case the browser gets cleared.';
+  $('backupInfo').textContent = `${live().length} ${plural(live().length,'voucher')} saved on this device. ` + (state.lastBackup ? `Last backup ${new Date(state.lastBackup).toLocaleDateString('en-GB')}.` : 'Never backed up.') + ' Download a backup weekly in case the browser gets cleared.';
 }
 $('tab-settings').addEventListener('input', e => {
   const t = e.target;
@@ -463,17 +726,17 @@ $('tab-settings').addEventListener('input', e => {
   save(); fillSelects();
 });
 $('tab-settings').addEventListener('click', e => {
-  const t = e.target;
-  if (t.dataset.dealDel) { state.settings.deals.splice(+t.dataset.dealDel,1); }
-  else if (t.dataset.staffDel) { state.settings.staff.splice(+t.dataset.staffDel,1); }
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.dealDel) state.settings.deals.splice(+b.dataset.dealDel,1);
+  else if (b.dataset.staffDel) state.settings.staff.splice(+b.dataset.staffDel,1);
   else return;
   save(); renderSettings(); fillSelects();
 });
-$('addDeal').addEventListener('click', () => { state.settings.deals.push({name:'New deal', value:0}); save(); renderSettings(); fillSelects(); });
-function addStaff(){ const n = $('newStaff').value.trim(); if (!n || state.settings.staff.includes(n)) return; state.settings.staff.push(n); $('newStaff').value=''; save(); renderSettings(); fillSelects(); }
+$('addDeal').addEventListener('click', () => { state.settings.deals.push({name:'New deal', value:0}); save(); renderSettings(); fillSelects(); const ins = document.querySelectorAll('[data-deal-name]'); ins[ins.length-1]?.select(); });
+function addStaff(){ const n = $('newStaff').value.trim(); if (!n) return; if (state.settings.staff.includes(n)) { toast(`${n} is already on the team.`, 'warn'); return; } state.settings.staff.push(n); $('newStaff').value=''; save(); renderSettings(); fillSelects(); }
 $('addStaff').addEventListener('click', addStaff);
 $('newStaff').addEventListener('keydown', e => { if (e.key==='Enter') { e.preventDefault(); addStaff(); } });
-$('backupBtn').addEventListener('click', () => { state.lastBackup = Date.now(); save(); download(`voucher-desk-backup-${tonight()}.json`, JSON.stringify(state,null,1), 'application/json'); renderSettings(); });
+$('backupBtn').addEventListener('click', () => { state.lastBackup = Date.now(); save(); download(`voucher-desk-backup-${tonight()}.json`, JSON.stringify(state,null,1), 'application/json'); renderSettings(); toast('Backup downloaded.'); });
 $('restoreFile').addEventListener('change', async e => {
   const f = e.target.files[0]; if (!f) return;
   try {
@@ -484,15 +747,15 @@ $('restoreFile').addEventListener('change', async e => {
     state.vouchers.push(...added);
     for (const c of data.checks||[]) if (!state.checks.some(x => x.night===c.night)) state.checks.push(c);
     save(); render(); renderSettings();
-    flash('restoreMsg','good',`Restored ${added.length} voucher${added.length===1?'':'s'} that weren't already here.`);
-  } catch(err){ flash('restoreMsg','bad',"That file isn't a Voucher Desk backup."); }
+    toast(`Restored ${added.length} ${plural(added.length,'voucher')}.`);
+  } catch(err){ toast("That file isn't a Voucher Desk backup.", 'bad'); }
   e.target.value = '';
 });
 
 fillSelects();
 render();
+showTab(location.hash.slice(1));
 setInterval(render, 60000); // roll over to the new night at 5am without a refresh
-if (!state.settings.staff.length) flash('addMsg','warn','First time here? Add staff names and your real deals in Settings.');
 })();
 </script>
 </body>
