@@ -2,6 +2,10 @@
 
 The owner is a beginner and a restaurant supervisor, and they usually edit from their phone mid-shift. Keep replies short and plain-English, and end each change with what to test.
 
+**Who uses the app:** only the host desk laptop, in a desktop browser. Nobody uses it on a phone. The owner talks to Claude Code from their phone, which is why sessions come from a phone, but **design and test for laptop screens only (about 1280–1440px wide)**. Don't spend effort on phone layouts. The existing small-screen CSS only needs to keep working so the owner can glance at the live site on their phone after a change.
+
+**Workflow:** make changes on a branch and open a PR. Netlify posts a deploy-preview link on the PR, and the owner checks it there before saying "merge".
+
 - The whole app is `index.html` (HTML, CSS and JS inline, no build step, no dependencies). Keep it that way.
 - It is live on Netlify, deployed from `main`: https://voucher-desk.netlify.app/. A change only goes live once it's on `main`, and Netlify takes under a minute to update. When working on a branch, offer to merge it to `main` so the change can be tested.
 - Data lives in the browser's localStorage under `voucherDesk.v1`. **Never rename that key or change the saved data's shape without migrating it**, or the host laptop loses its log.
