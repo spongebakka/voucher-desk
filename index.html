@@ -53,6 +53,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .tab[aria-selected="true"]::after{content:"";position:absolute;left:14px;right:14px;bottom:-1px;height:2px;background:var(--accent);border-radius:2px 2px 0 0}
 .tab .count{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:var(--warn);color:#1a1200;font-size:11px;font-weight:700}
 .night{margin-left:auto;color:var(--bar-ink-2);font-size:13px;white-space:nowrap}
+.sync{margin-left:auto;display:inline-flex;align-items:center;gap:7px;color:var(--bar-ink-2);font-size:13px;white-space:nowrap}
+.sync::before{content:"";width:8px;height:8px;border-radius:50%;background:#3ecf8e}
+.sync.warn::before{background:#f3b450}
+.sync:not([hidden]) ~ .night{margin-left:18px}
 @media (max-width:760px){
   .bar-in{height:auto;flex-wrap:wrap;gap:0;padding-top:12px}
   .brand{height:28px}
@@ -268,6 +272,9 @@ td.c,th.c{text-align:center}
 .toast .ic{width:18px;height:18px}
 .toast.ok .ic{color:#42cf98} .toast.bad .ic{color:#ff7b7b} .toast.warn .ic{color:#f3b450}
 .banner{display:flex;gap:10px;align-items:center;background:var(--bad-soft);color:var(--bad);border-radius:var(--r);padding:12px 16px;font-size:14px;margin-bottom:20px}
+.banner.warn{background:var(--warn-soft);color:var(--warn)}
+.banner .btn{margin-left:auto;flex:none}
+.form-stack{display:flex;flex-direction:column;gap:14px}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -297,12 +304,14 @@ td.c,th.c{text-align:center}
       <button class="tab" role="tab" data-tab="history" aria-selected="false">History</button>
       <button class="tab" role="tab" data-tab="settings" aria-selected="false">Settings</button>
     </nav>
+    <div class="sync" id="syncStatus" hidden></div>
     <div class="night" id="nightLabel"></div>
   </div>
 </header>
 
 <main>
   <div id="storageBanner" class="banner" hidden><svg class="ic"><use href="#i-alert"/></svg>This browser isn't letting the page save, so anything logged will be lost. Open it in normal Chrome or Safari, not a private window.</div>
+  <div id="syncBanner" class="banner warn" hidden><svg class="ic"><use href="#i-alert"/></svg>This laptop isn't signed in to the shared log, so what you log here stays on this laptop.<a class="btn sm" href="#settings">Sign in</a></div>
 
   <!-- ================= TONIGHT ================= -->
   <section id="tab-tonight">
@@ -463,7 +472,7 @@ td.c,th.c{text-align:center}
 
   <!-- ================= SETTINGS ================= -->
   <section id="tab-settings" hidden>
-    <div class="page-head"><div><h1>Settings</h1><p>Saved on this device only.</p></div></div>
+    <div class="page-head"><div><h1>Settings</h1><p id="settingsSub">Saved on this device only.</p></div></div>
     <div class="settings-grid">
       <div class="stack">
         <div class="panel">
@@ -483,6 +492,24 @@ td.c,th.c{text-align:center}
         </div>
       </div>
       <div class="stack">
+        <div class="panel" id="sharePanel" hidden>
+          <div class="panel-head"><h2>Shared log</h2></div>
+          <div class="panel-body">
+            <form id="signInForm" class="form-stack">
+              <p class="muted-text">Sign in once on each laptop with the desk login. After that, every voucher shows up on all the desk laptops.</p>
+              <div class="f"><label for="sbEmail">Desk login email</label><input class="input" id="sbEmail" type="email" autocomplete="username" spellcheck="false" required></div>
+              <div class="f"><label for="sbPass">Password</label><input class="input" id="sbPass" type="password" autocomplete="current-password" required></div>
+              <button class="btn primary" type="submit" id="signInBtn">Sign in</button>
+            </form>
+            <div id="signedIn" class="form-stack" hidden>
+              <p class="muted-text" id="shareInfo"></p>
+              <div class="btn-pair">
+                <button class="btn" id="syncBtn" type="button">Sync now</button>
+                <button class="btn" id="signOutBtn" type="button">Sign out</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="panel">
           <div class="panel-head"><h2>itison link</h2></div>
           <div class="panel-body">
@@ -517,12 +544,21 @@ const KEY = 'voucherDesk.v1';           // never rename: the host laptop's log l
 const DAY_START_HOUR = 5;               // a "night" runs 5am to 5am
 const STEPS = [['itison','itison','Redeemed on itison'],['till','Till','Put through the till'],['receipt','Receipt','Receipt in the till']];
 
+// Shared log (Supabase). Leave both empty and the app keeps everything on this laptop only.
+// The key is the "publishable"/anon key, which is meant to be public: the desk login and the
+// database's row level security are what keep the data private (see supabase-setup.sql).
+const SB_URL = '';
+const SB_KEY = '';
+const SYNC = !!(SB_URL && SB_KEY);
+
+const FRESH_SETTINGS = () => ({ deals: [{name:'Example deal (edit in Settings)', value:30}], staff: [], hubUrl: '' });
 let storageOK = true;
-let state = load() || { vouchers: [], checks: [], settings: { deals: [{name:'Example deal (edit in Settings)', value:30}], staff: [], hubUrl: '' }, lastBackup: null };
+let state = load() || { vouchers: [], checks: [], settings: FRESH_SETTINGS(), lastBackup: null };
 if (!state.checks) state.checks = [];
 
 function load(){ try { const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; } catch(e){ storageOK = false; return null; } }
-function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){ storageOK = false; } $('storageBanner').hidden = storageOK; }
+function writeLocal(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){ storageOK = false; } $('storageBanner').hidden = storageOK; }
+function save(){ writeLocal(); if (SYNC) scheduleSync(); }
 function pref(k, v){ try { if (v === undefined) return localStorage.getItem('voucherDesk.'+k); localStorage.setItem('voucherDesk.'+k, v); } catch(e){ return null; } }
 
 const $ = id => document.getElementById(id);
@@ -847,10 +883,173 @@ $('restoreFile').addEventListener('change', async e => {
   e.target.value = '';
 });
 
+/* ---------- Shared log ----------
+   Every voucher, end-of-shift check and the settings is one row in Supabase's `records` table.
+   This laptop keeps its full copy in localStorage (so it works offline) and every 10s it
+   pulls rows changed since last time, then pushes anything edited here. Newest edit wins. */
+const hash = s => { let a = 0xdeadbeef, b = 0x41c6ce57; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); a = Math.imul(a ^ c, 2654435761); b = Math.imul(b ^ c, 1597334677); }
+  a = Math.imul(a ^ (a >>> 16), 2246822507) ^ Math.imul(b ^ (b >>> 13), 3266489909); b = Math.imul(b ^ (b >>> 16), 2246822507) ^ Math.imul(a ^ (a >>> 13), 3266489909);
+  return (4294967296 * (2097151 & b) + (a >>> 0)).toString(36); };
+const jget = k => { try { return JSON.parse(pref(k) || 'null'); } catch(e){ return null; } };
+const jset = (k, v) => pref(k, JSON.stringify(v));
+let sess = SYNC ? jget('session') : null;
+// sent: hash of each record as the server last had it. pend/upd: hash and time of an edit not yet sent.
+let meta = Object.assign({ since: null, pulled: false, sent: {}, pend: {}, upd: {} }, SYNC ? jget('sync') : null);
+let syncBusy = false, syncAgain = false, syncTimer = null, lastSynced = null, waiting = 0, syncMode = 'off';
+
+function records(){
+  const out = {};
+  for (const v of state.vouchers) out['v:' + v.id] = v;
+  for (const c of state.checks) out['c:' + c.night] = c;
+  out['s:main'] = state.settings;
+  return out;
+}
+function recJSON(kind, id){
+  const r = kind === 'v' ? state.vouchers.find(v => v.id === id) : kind === 'c' ? state.checks.find(c => c.night === id) : state.settings;
+  return r === undefined ? undefined : JSON.stringify(r);
+}
+function putRec(kind, id, data){
+  if (kind === 's') { state.settings = Object.assign(FRESH_SETTINGS(), data); return; }
+  const arr = kind === 'v' ? state.vouchers : state.checks, k = kind === 'v' ? 'id' : 'night';
+  const i = arr.findIndex(x => x[k] === id);
+  if (i < 0) arr.push(data); else arr[i] = data;
+}
+// Note the time of any edit made here, so the newest edit wins if two laptops change the same thing.
+function stamp(){
+  const out = [];
+  for (const [key, data] of Object.entries(records())) {
+    const js = JSON.stringify(data), h = hash(js);
+    if (meta.sent[key] === h) { delete meta.pend[key]; continue; }
+    if (meta.pend[key] !== h) { meta.pend[key] = h; meta.upd[key] = Date.now(); }
+    out.push({ key, js, h });
+  }
+  waiting = out.length; jset('sync', meta);
+  return out;
+}
+function scheduleSync(){ stamp(); clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 800); }
+
+function setSession(j){
+  sess = { access_token: j.access_token, refresh_token: j.refresh_token, expires_at: j.expires_at || Math.floor(Date.now()/1000) + (j.expires_in || 3600), email: j.user?.email || sess?.email || '' };
+  jset('session', sess);
+}
+async function authCall(grant, body){
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=${grant}`, { method: 'POST', headers: { apikey: SB_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  return { r, j };
+}
+async function accessToken(){
+  if (!sess) return null;
+  if (sess.expires_at * 1000 - 60000 < Date.now()) {
+    const { r, j } = await authCall('refresh_token', { refresh_token: sess.refresh_token });
+    if (r.status === 400 || r.status === 401) { signOut(); return null; } // login revoked or password changed
+    if (!r.ok) throw new Error('offline');
+    setSession(j);
+  }
+  return sess.access_token;
+}
+async function rest(path, init = {}){
+  const t = await accessToken(); if (!t) throw new Error('signed-out');
+  const r = await fetch(`${SB_URL}/rest/v1/${path}`, { ...init, headers: { apikey: SB_KEY, Authorization: 'Bearer ' + t, 'Content-Type': 'application/json', ...(init.headers || {}) } });
+  if (r.status === 401) { sess.expires_at = 0; throw new Error('expired'); }
+  if (!r.ok) throw new Error('http ' + r.status);
+  return r.status === 200 ? r.json() : null;
+}
+
+async function pull(){
+  const first = !meta.pulled, since = meta.since ? new Date(Date.parse(meta.since) - 60000).toISOString() : null; // 60s overlap: never miss a slow save
+  let newest = meta.since, changed = false;
+  for (let off = 0; ; off += 500) {
+    const rows = await rest(`records?select=kind,id,data,upd,changed_at&order=changed_at.asc,kind.asc,id.asc&limit=500&offset=${off}` + (since ? '&changed_at=gt.' + encodeURIComponent(since) : ''));
+    for (const row of rows) {
+      if (!newest || Date.parse(row.changed_at) > Date.parse(newest)) newest = row.changed_at;
+      const key = row.kind + ':' + row.id, js = JSON.stringify(row.data), h = hash(js);
+      if (meta.sent[key] === h) continue;
+      const cur = recJSON(row.kind, row.id);
+      if (cur !== undefined && cur !== js && meta.sent[key] !== hash(cur)) { // edited here and not sent yet
+        const freshSettings = first && row.kind === 's' && cur === JSON.stringify(FRESH_SETTINGS());
+        const mine = meta.pend[key] === hash(cur) ? (meta.upd[key] || 0) : Date.now();
+        if (!freshSettings && mine >= row.upd) continue; // ours is newer; push() sends it
+      }
+      if (cur !== js) { putRec(row.kind, row.id, row.data); changed = true; }
+      meta.sent[key] = h; meta.upd[key] = row.upd; delete meta.pend[key];
+    }
+    if (rows.length < 500) break;
+  }
+  meta.since = newest; meta.pulled = true;
+  if (changed) {
+    state.vouchers.sort((a, b) => a.at - b.at);
+    writeLocal(); fillSelects(); render();
+    if (!$('tab-history').hidden) renderHistory();
+    if (!$('tab-settings').contains(document.activeElement)) renderSettings();
+  }
+}
+async function push(){
+  const out = stamp();
+  if (!out.length) return;
+  for (let i = 0; i < out.length; i += 200) {
+    const batch = out.slice(i, i + 200);
+    await rest('records?on_conflict=kind,id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(batch.map(o => { const c = o.key.indexOf(':'); return { kind: o.key.slice(0, c), id: o.key.slice(c + 1), data: JSON.parse(o.js), upd: meta.upd[o.key] }; })) });
+    for (const o of batch) { meta.sent[o.key] = o.h; if (meta.pend[o.key] === o.h) delete meta.pend[o.key]; }
+    jset('sync', meta);
+  }
+  stamp();
+}
+async function syncNow(){
+  if (!SYNC) return;
+  if (!sess) return showSync('out');
+  if (syncBusy) { syncAgain = true; return; }
+  syncBusy = true;
+  try { await pull(); await push(); lastSynced = Date.now(); showSync('ok'); }
+  catch(e){ showSync(sess ? 'offline' : 'out'); }
+  finally { jset('sync', meta); syncBusy = false; if (syncAgain) { syncAgain = false; setTimeout(syncNow, 0); } }
+}
+function showSync(mode){
+  syncMode = mode;
+  const el = $('syncStatus');
+  el.hidden = !SYNC;
+  el.className = 'sync' + (mode === 'ok' ? '' : ' warn');
+  el.textContent = mode === 'ok' ? 'Shared log' : mode === 'out' ? 'Not signed in' : waiting ? `Offline · ${waiting} to send` : 'Offline';
+  el.title = mode === 'ok' && lastSynced ? 'Up to date as of ' + new Date(lastSynced).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) : '';
+  $('syncBanner').hidden = !(SYNC && mode === 'out');
+  renderShare();
+}
+function renderShare(){
+  $('sharePanel').hidden = !SYNC;
+  if (!SYNC) return;
+  $('signInForm').hidden = !!sess; $('signedIn').hidden = !sess;
+  $('settingsSub').textContent = sess ? 'Shared across the desk laptops.' : 'Saved on this device only.';
+  if (sess) $('shareInfo').textContent = `Signed in as ${sess.email || 'the desk login'}. ` +
+    (syncMode === 'ok' ? `Up to date as of ${new Date(lastSynced).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}.` : `Can't reach the shared log right now. Anything logged here is kept and sent when the connection is back${waiting ? ` (${waiting} waiting)` : ''}.`);
+}
+function signOut(){ sess = null; jset('session', null); showSync('out'); }
+
+$('signInForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('signInBtn'); btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const { r, j } = await authCall('password', { email: $('sbEmail').value.trim(), password: $('sbPass').value });
+    if (!r.ok) throw new Error(r.status === 400 ? 'Wrong email or password.' : 'Sign-in failed. Try again.');
+    setSession(j); $('sbPass').value = '';
+    toast('Signed in. Syncing this laptop…');
+    stamp(); await syncNow();
+    if (syncMode === 'ok') toast('Signed in. This laptop is sharing its log.');
+  } catch(err){ toast(err.message === 'Failed to fetch' ? "Can't connect. Check the wifi." : err.message, 'bad'); }
+  btn.disabled = false; btn.textContent = 'Sign in';
+});
+$('syncBtn').addEventListener('click', async () => { await syncNow(); toast(syncMode === 'ok' ? 'Up to date.' : "Can't reach the shared log.", syncMode === 'ok' ? 'ok' : 'bad'); });
+$('signOutBtn').addEventListener('click', () => { if (confirm('Sign this laptop out of the shared log? What is already here stays on this laptop.')) signOut(); });
+
 fillSelects();
 render();
 showTab(location.hash.slice(1));
 setInterval(render, 60000); // roll over to the new night at 5am without a refresh
+if (SYNC) {
+  stamp(); showSync(sess ? 'offline' : 'out'); syncNow();
+  setInterval(() => { if (!document.hidden) syncNow(); }, 10000);
+  addEventListener('online', syncNow);
+  addEventListener('focus', syncNow);
+}
 })();
 </script>
 </body>

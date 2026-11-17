@@ -9,6 +9,17 @@ It is just `index.html`. It needs no install, no logins and no internet (the fon
 
 Offline fallback: save `index.html` somewhere permanent and open it. That copy keeps its own separate log.
 
+## Sharing the log between the desk laptops (Supabase)
+One-time setup, all on supabase.com:
+1. New project (any name, region London). Save the database password somewhere safe; the app doesn't need it.
+2. SQL Editor → New query → paste all of `supabase-setup.sql` → Run.
+3. Authentication → Sign In / Providers → turn off **Allow new users to sign up**.
+4. Authentication → Users → Add user → Create new user: the desk login email and password, with **Auto confirm** ticked. Share the password with the desk staff, never in the repo.
+5. Project Settings → API (or Connect): copy the **Project URL** and the **publishable** (or anon) key. Both are safe to be public. They go in `SB_URL` and `SB_KEY` at the top of the script in `index.html`.
+6. On each laptop, go to Settings → Shared log and sign in once. Sign in first on the laptop that already has the real deals and staff set up.
+
+If the wifi drops, each laptop keeps logging and sends everything when it's back (the top bar shows "Offline · N to send").
+
 ## Where the data lives
 In that laptop's browser only, tied to the web address. Updating the code doesn't touch it. Clearing the browser data wipes it, so use **Settings → Download backup** weekly.
 History → Download as spreadsheet gives managers a CSV that opens in Excel.
