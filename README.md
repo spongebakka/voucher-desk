@@ -3,15 +3,14 @@
 A single page that replaces the paper checklist and the Excel sheet for itison vouchers.
 It is just `index.html`. It needs no install, no logins and no internet (the fonts fall back if it's offline).
 
-## Live version
-https://spongebakka.github.io/voucher-desk/ (updates about a minute after a change lands on `main`). On the host laptop, open that link and bookmark it. That is easier than copying the file across.
-1. Copy `index.html` to the laptop (USB stick, email it to yourself, AirDrop, anything).
-2. Save it somewhere permanent, e.g. Documents. **Don't leave it in Downloads**: if the file moves, the saved data stays behind.
-3. Open it in Chrome. Bookmark it, or pin the tab next to itison.
-4. Go to Settings and add the staff names, the real deals with their till amounts, and the itison redemption page link.
+## Putting it on the host desk laptop
+1. Open https://spongebakka.github.io/voucher-desk/ in Chrome and bookmark it. It updates about a minute after a change lands on `main`.
+2. Go to Settings and add the staff names, the real deals with their till amounts, and the itison redemption page link.
+
+Offline fallback: save `index.html` somewhere permanent and open it. That copy keeps its own separate log.
 
 ## Where the data lives
-In that laptop's browser only, under that file's location. Clearing the browser data wipes it, so use **Settings → Download backup** weekly.
+In that laptop's browser only, tied to the web address. Updating the code doesn't touch it. Clearing the browser data wipes it, so use **Settings → Download backup** weekly.
 History → Download as spreadsheet gives managers a CSV that opens in Excel.
 
 ## How the end of shift check works
