@@ -71,8 +71,10 @@ main{max-width:1240px;margin:0 auto;padding-top:24px;padding-bottom:calc(48px + 
 .page-head p{margin:4px 0 0;color:var(--ink-2);font-size:14px}
 
 /* KPI strip: four equal tiles, 2×2 on phones */
-.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:24px}
-@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px}}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}}
+.stack.right{gap:16px}
+@media (max-width:1000px){.layout{gap:16px}}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);min-width:0}
 .kpi-label{font-size:13px;color:var(--ink-2);display:flex;align-items:center;gap:6px}
 .kpi-val{font-size:26px;font-weight:600;letter-spacing:-.6px;line-height:1.25;margin-top:4px}
@@ -98,6 +100,13 @@ main{max-width:1240px;margin:0 auto;padding-top:24px;padding-bottom:calc(48px + 
 .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .f{display:flex;flex-direction:column;gap:6px;min-width:0}
 .f.full{grid-column:1/-1}
+.fields.compact{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 12px}
+.fields.compact .s2{grid-column:span 2}
+.code-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.code-row .btn{height:52px;padding:0 14px}
+.switch-row{flex-direction:row;gap:8px}
+.switch-row .switch{flex:1;min-width:0}
+.fields.compact + .actions{margin-top:16px}
 .f label,.lbl{font-size:13px;font-weight:500;color:var(--ink-2)}
 .input,.select,.textarea{width:100%;height:var(--h);border:1px solid var(--line-2);background:var(--surface);border-radius:var(--r-sm);padding:0 12px;font-size:15px;transition:border-color .15s, box-shadow .15s}
 .textarea{height:auto;min-height:120px;padding:10px 12px;resize:vertical;font-size:14px;line-height:1.5}
@@ -272,25 +281,21 @@ td.c,th.c{text-align:center}
 
   <!-- ================= TONIGHT ================= -->
   <section id="tab-tonight">
-    <div class="kpis">
-      <div class="kpi"><div class="kpi-label">Vouchers tonight</div><div class="kpi-val num" id="kCount">0</div></div>
-      <div class="kpi"><div class="kpi-label">Till amount</div><div class="kpi-val num" id="kTotal">£0</div></div>
-      <div class="kpi"><div class="kpi-label">Fully done</div><div class="kpi-val num" id="kDone">0</div></div>
-      <div class="kpi" id="kOpenBox"><div class="kpi-label"><span class="dot"></span>Needs finishing</div><div class="kpi-val num" id="kOpen">0</div></div>
-    </div>
-
     <div class="layout">
       <form class="panel sticky" id="addForm" autocomplete="off" novalidate>
         <div class="panel-head"><h2>New voucher</h2><span class="sub">PIN is never stored</span></div>
         <div class="panel-body">
           <div class="notice" id="setupNotice" hidden><span>Add your team and deals first.</span><button type="button" class="btn sm" data-goto="settings">Open settings</button></div>
-          <div class="fields">
+          <div class="fields compact">
             <div class="f full">
               <label for="code">Voucher code</label>
-              <input class="input code" id="code" placeholder="Type or paste the code" spellcheck="false" autocapitalize="characters">
+              <div class="code-row">
+                <input class="input code" id="code" placeholder="Paste or type" spellcheck="false" autocapitalize="characters">
+                <button type="button" class="btn" id="copyOpen" title="Copy the code and open itison in a new tab"><svg class="ic"><use href="#i-copy"/></svg>Open itison</button>
+              </div>
               <div id="dupMsg" hidden></div>
             </div>
-            <div class="f full">
+            <div class="f s2">
               <label for="deal">Deal</label>
               <select class="select" id="deal"></select>
             </div>
@@ -300,27 +305,34 @@ td.c,th.c{text-align:center}
             </div>
             <div class="f">
               <label for="table">Table</label>
-              <input class="input" id="table" inputmode="numeric" placeholder="e.g. 12">
+              <input class="input" id="table" inputmode="numeric" placeholder="12">
             </div>
-            <div class="f full">
+            <div class="f s2">
               <label for="staff">Logged by</label>
               <select class="select" id="staff"></select>
             </div>
-            <div class="f full">
-              <label for="note">Note <span style="color:var(--ink-3);font-weight:400">optional</span></label>
+            <div class="f full" id="noteWrap" hidden>
+              <label for="note">Note</label>
               <input class="input" id="note" placeholder="Split bill, extra drinks…">
             </div>
-            <div class="f full">
-              <label class="switch"><input type="checkbox" id="alreadyRedeemed" checked><span class="track"></span>Already redeemed on itison</label>
+            <div class="f full switch-row">
+              <label class="switch"><input type="checkbox" id="alreadyRedeemed" checked><span class="track"></span>Redeemed on itison</label>
+              <button type="button" class="btn" id="addNote"><svg class="ic"><use href="#i-plus"/></svg>Note</button>
             </div>
           </div>
           <div class="actions">
-            <button type="button" class="btn block" id="copyOpen"><svg class="ic"><use href="#i-copy"/></svg>Copy code and open itison</button>
             <button type="submit" class="btn primary block lg">Log voucher</button>
           </div>
         </div>
       </form>
 
+      <div class="stack right">
+      <div class="kpis">
+        <div class="kpi"><div class="kpi-label">Vouchers tonight</div><div class="kpi-val num" id="kCount">0</div></div>
+        <div class="kpi"><div class="kpi-label">Till amount</div><div class="kpi-val num" id="kTotal">£0</div></div>
+        <div class="kpi"><div class="kpi-label">Fully done</div><div class="kpi-val num" id="kDone">0</div></div>
+        <div class="kpi" id="kOpenBox"><div class="kpi-label"><span class="dot"></span>Needs finishing</div><div class="kpi-val num" id="kOpen">0</div></div>
+      </div>
       <div class="panel list-panel">
         <div class="panel-head"><h2>Tonight's vouchers</h2><span class="sub num" id="listSub"></span></div>
         <div id="openGroup" hidden>
@@ -336,6 +348,7 @@ td.c,th.c{text-align:center}
           <strong>No vouchers yet tonight</strong>
           <p>Log one with the form. It shows up here with its three steps, and stays under Needs finishing until all three are ticked.</p>
         </div>
+      </div>
       </div>
     </div>
   </section>
@@ -537,6 +550,8 @@ function dupCheck(){
 }
 $('code').addEventListener('input', dupCheck);
 
+$('addNote').addEventListener('click', () => { $('noteWrap').hidden = false; $('addNote').hidden = true; $('note').focus(); });
+
 /* ---------- copy + open itison ---------- */
 $('copyOpen').addEventListener('click', async () => {
   const code = $('code').value.trim();
@@ -567,7 +582,7 @@ $('addForm').addEventListener('submit', e => {
   };
   state.vouchers.push(v); save();
   flashId = v.id; setTimeout(() => { flashId = null; }, 1500);
-  $('code').value = ''; $('table').value = ''; $('note').value = ''; dupCheck();
+  $('code').value = ''; $('table').value = ''; $('note').value = ''; $('noteWrap').hidden = true; $('addNote').hidden = false; dupCheck();
   toast(`Logged ${code}. Put ${money(value)} through the till as itison.`);
   render(); $('code').focus();
 });
