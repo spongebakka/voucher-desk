@@ -62,6 +62,12 @@ button,input,select,textarea{font:inherit;color:inherit}
   .tab{padding:0 10px}
   .tab[aria-selected="true"]::after{left:10px;right:10px}
 }
+@media (max-width:400px){
+  .tabs{margin:6px 0 0}
+  .tab{flex:1 1 auto;padding:0 4px;font-size:13px}
+  .tab[aria-selected="true"]::after{left:4px;right:4px}
+  .tab .count{margin-left:4px}
+}
 
 /* ---------- page ---------- */
 main{max-width:1240px;margin:0 auto;padding-top:24px;padding-bottom:calc(48px + env(safe-area-inset-bottom,0px));padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
@@ -105,7 +111,7 @@ main{max-width:1240px;margin:0 auto;padding-top:24px;padding-bottom:calc(48px + 
 .input.pin{text-align:center;letter-spacing:6px;padding:0 8px}
 .input.pin::placeholder{font-family:var(--mono);font-weight:600;letter-spacing:6px;font-size:19px;color:var(--line-2)}
 .fields.compact + .actions{margin-top:16px}
-.sub-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sub-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
 .sub-actions .help{flex:1}
 .stepper{display:flex;gap:4px;font-size:12px;font-weight:600}
 .stepper span{padding:4px 10px;border-radius:12px;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
@@ -159,7 +165,7 @@ button:focus-visible,.tab:focus-visible,.btn:focus-visible{outline:2px solid var
 .icon-btn{width:36px;height:36px;display:grid;place-items:center;border-radius:var(--r-sm);border:1px solid transparent;background:none;color:var(--ink-3);cursor:pointer}
 .icon-btn:hover{background:var(--surface-2);color:var(--ink);border-color:var(--line)}
 .icon-btn.armed{width:auto;padding:0 10px;background:var(--bad-soft);color:var(--bad);font-size:13px;font-weight:600;border-color:transparent}
-.actions{display:grid;gap:10px;margin-top:20px}
+.actions{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-top:20px}
 
 .notice{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:var(--r-sm);background:var(--accent-soft);color:var(--ink);font-size:14px;margin-bottom:20px}
 
@@ -168,12 +174,12 @@ button:focus-visible,.tab:focus-visible,.btn:focus-visible{outline:2px solid var
 .group-label{display:flex;align-items:center;gap:8px;padding:12px 20px;background:var(--surface-2);border-bottom:1px solid var(--line);font-size:12px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--ink-2)}
 .group-label.attn{color:var(--warn);background:var(--warn-soft)}
 .group-label .n{margin-left:auto;font-variant-numeric:tabular-nums}
-.vrow{display:grid;grid-template-columns:minmax(0,1fr) 80px 312px 36px;grid-template-areas:"main amt steps del";align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.vrow{display:grid;grid-template-columns:minmax(0,1fr) 80px 312px auto;grid-template-areas:"main amt steps del";align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line)}
 .vrow:last-child{border-bottom:0}
 .vmain{grid-area:main;min-width:0}
-.vcode{font:600 15px var(--mono);letter-spacing:.6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vcode{font:600 15px var(--mono);letter-spacing:.6px;overflow-wrap:anywhere}
 .vmeta{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:3px;font-size:13px;color:var(--ink-2)}
-.vmeta span{white-space:nowrap}
+.vmeta span{min-width:0;overflow-wrap:anywhere}
 .vmeta .pinv{font:600 13px var(--mono);color:var(--ink);letter-spacing:.5px}
 .vmeta .older{color:var(--warn);font-weight:600}
 .vamt{grid-area:amt;text-align:right;font-weight:600;font-size:16px;font-variant-numeric:tabular-nums}
@@ -190,7 +196,7 @@ button:focus-visible,.tab:focus-visible,.btn:focus-visible{outline:2px solid var
 .vrow.flash{animation:flash 1.4s ease-out}
 @keyframes flash{from{background:var(--accent-soft)}to{background:transparent}}
 @container (max-width:680px){
-  .vrow{grid-template-columns:minmax(0,1fr) auto 36px;grid-template-areas:"main amt del" "steps steps steps";gap:12px;padding:14px 16px}
+  .vrow{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"main amt del" "steps steps steps";gap:12px;padding:14px 16px}
   .group-label{padding:10px 16px}
 }
 .empty{padding:40px 24px;text-align:center;color:var(--ink-2)}
@@ -665,7 +671,7 @@ function rowHTML(v){
   return `<div class="vrow ${rej?'rejected':isDone(v)?'done':''} ${v.id===flashId?'flash':''}">
     <div class="vmain">
       <div class="vcode">${esc(v.code)}</div>
-      <div class="vmeta">${older}${v.pin ? `<span>PIN <b class="pinv">${esc(v.pin)}</b></span>` : ''}<span>Table ${esc(v.table||'–')}</span><span>${esc(v.staff||'No name')}</span><span>${timeOf(v.at)}</span>${v.deal ? `<span>${esc(v.deal)}</span>` : ''}${v.note ? `<span>${esc(v.note)}</span>` : ''}</div>
+      <div class="vmeta">${older}${v.pin ? `<span>PIN&nbsp;<b class="pinv">${esc(v.pin)}</b></span>` : ''}<span>Table&nbsp;${esc(v.table||'–')}</span><span>${esc(v.staff||'No name')}</span><span>${timeOf(v.at)}</span>${v.deal ? `<span>${esc(v.deal)}</span>` : ''}${v.note ? `<span>${esc(v.note)}</span>` : ''}</div>
     </div>
     <div class="vamt">${money(v.value)}</div>
     ${rej ? `<div class="vreject"><span class="pill bad">${icon('x')}Rejected by itison</span></div>` : `<div class="vsteps" role="group" aria-label="Steps for ${esc(v.code)}">${steps}</div>`}
