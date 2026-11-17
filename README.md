@@ -3,7 +3,8 @@
 A single page that replaces the paper checklist and the Excel sheet for itison vouchers.
 It is just `index.html`. It needs no install, no logins and no internet (the fonts fall back if it's offline).
 
-## Putting it on the host desk laptop
+## Live version
+https://spongebakka.github.io/voucher-desk/ (updates about a minute after a change lands on `main`). On the host laptop, open that link and bookmark it. That is easier than copying the file across.
 1. Copy `index.html` to the laptop (USB stick, email it to yourself, AirDrop, anything).
 2. Save it somewhere permanent, e.g. Documents. **Don't leave it in Downloads**: if the file moves, the saved data stays behind.
 3. Open it in Chrome. Bookmark it, or pin the tab next to itison.
