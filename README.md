@@ -1,6 +1,6 @@
 # Voucher Desk
 
-A single page that replaces the paper checklist and the Excel sheet for itison vouchers at Kai's restaurant.
+A single page that replaces the paper checklist and the Excel sheet for itison vouchers.
 It is just `index.html`. It needs no install, no logins and no internet (the fonts fall back if it's offline).
 
 ## Putting it on the host desk laptop
