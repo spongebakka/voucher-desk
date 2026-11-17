@@ -11,12 +11,10 @@ Offline fallback: save `index.html` somewhere permanent and open it. That copy k
 
 ## Sharing the log between the desk laptops (Supabase)
 One-time setup, all on supabase.com:
-1. New project (any name, region London). Save the database password somewhere safe; the app doesn't need it.
-2. SQL Editor → New query → paste all of `supabase-setup.sql` → Run.
-3. Authentication → Sign In / Providers → turn off **Allow new users to sign up**.
-4. Authentication → Users → Add user → Create new user: the desk login email and password, with **Auto confirm** ticked. Share the password with the desk staff, never in the repo.
-5. Project Settings → API (or Connect): copy the **Project URL** and the **publishable** (or anon) key. Both are safe to be public. They go in `SB_URL` and `SB_KEY` at the top of the script in `index.html`.
-6. On each laptop, go to Settings → Shared log and sign in once. Sign in first on the laptop that already has the real deals and staff set up.
+1. New project (any name, region London). The database password it asks for isn't needed by the app; let it generate one.
+2. SQL Editor → New query → paste all of `supabase-setup.sql` → Run. The result at the bottom is your **setup link**. Keep it private and out of the repo.
+3. Project Settings → API (or Connect): the **Project URL** and the **publishable** (or anon) key go in `SB_URL` and `SB_KEY` at the top of the script in `index.html`. Both are safe to be public.
+4. Open the setup link once on each desk laptop, starting with the laptop that already has the real deals and staff. No sign-in needed. Lost the link? Run the last line of the SQL file again.
 
 If the wifi drops, each laptop keeps logging and sends everything when it's back (the top bar shows "Offline · N to send").
 
