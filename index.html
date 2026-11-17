@@ -102,11 +102,27 @@ main{max-width:1240px;margin:0 auto;padding-top:24px;padding-bottom:calc(48px + 
 .f.full{grid-column:1/-1}
 .fields.compact{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 12px}
 .fields.compact .s2{grid-column:span 2}
-.code-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
-.code-row .btn{height:52px;padding:0 14px}
-.switch-row{flex-direction:row;gap:8px}
-.switch-row .switch{flex:1;min-width:0}
+.input.pin{text-align:center;letter-spacing:6px;padding:0 8px}
+.input.pin::placeholder{font-family:var(--mono);font-weight:600;letter-spacing:6px;font-size:19px;color:var(--line-2)}
 .fields.compact + .actions{margin-top:16px}
+.sub-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sub-actions .help{flex:1}
+.stepper{display:flex;gap:4px;font-size:12px;font-weight:600}
+.stepper span{padding:4px 10px;border-radius:12px;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+.stepper span.on{color:var(--accent);background:var(--accent-soft)}
+.stage-lead{margin:0 0 14px;font-size:14px;color:var(--ink-2)}
+.redeem-box{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.redeem-row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:12px;padding:14px 16px;background:var(--surface-2)}
+.redeem-row + .redeem-row{border-top:1px solid var(--line)}
+.redeem-row .big{font:600 19px var(--mono);letter-spacing:1px;overflow-wrap:anywhere;min-width:0}
+@media (max-width:520px){.redeem-row{grid-template-columns:34px minmax(0,1fr) auto;gap:10px;padding:12px}.redeem-row .big{font-size:16px;letter-spacing:.5px}.redeem-row .btn.sm{padding:0 10px}}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:600}
+.btn.ok:hover{background:var(--ok);border-color:var(--ok);filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn.danger:hover{background:var(--bad-soft);border-color:var(--bad)}
+.vrow.rejected .vcode{text-decoration:line-through;color:var(--ink-3)}
+.vrow.rejected .vamt{color:var(--ink-3);text-decoration:line-through}
+.vreject{grid-area:steps;justify-self:start}
 .f label,.lbl{font-size:13px;font-weight:500;color:var(--ink-2)}
 .input,.select,.textarea{width:100%;height:var(--h);border:1px solid var(--line-2);background:var(--surface);border-radius:var(--r-sm);padding:0 12px;font-size:15px;transition:border-color .15s, box-shadow .15s}
 .textarea{height:auto;min-height:120px;padding:10px 12px;resize:vertical;font-size:14px;line-height:1.5}
@@ -220,7 +236,8 @@ td.r,th.r{text-align:right}
 td.c,th.c{text-align:center}
 .yes{color:var(--ok)} .no{color:var(--bad)}
 .yes .ic,.no .ic{width:16px;height:16px;stroke-width:2.6;vertical-align:middle}
-.pill{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;font-size:12px;font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap}
+.pill .ic{width:13px;height:13px;stroke-width:2.6}
 .pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.mute{background:var(--surface-2);color:var(--ink-3)}
 .table-foot{padding:12px 20px;font-size:13px;color:var(--ink-2);border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}
 
@@ -259,6 +276,7 @@ td.c,th.c{text-align:center}
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
   <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 5h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5z"/></symbol>
 </svg>
@@ -283,18 +301,19 @@ td.c,th.c{text-align:center}
   <section id="tab-tonight">
     <div class="layout">
       <form class="panel sticky" id="addForm" autocomplete="off" novalidate>
-        <div class="panel-head"><h2>New voucher</h2><span class="sub">PIN is never stored</span></div>
-        <div class="panel-body">
+        <div class="panel-head"><h2>New voucher</h2><span class="stepper" id="stepper"><span class="on">1 Details</span><span>2 Redeem</span></span></div>
+        <div class="panel-body" id="stageA">
           <div class="notice" id="setupNotice" hidden><span>Add your team and deals first.</span><button type="button" class="btn sm" data-goto="settings">Open settings</button></div>
           <div class="fields compact">
-            <div class="f full">
+            <div class="f s2">
               <label for="code">Voucher code</label>
-              <div class="code-row">
-                <input class="input code" id="code" placeholder="Paste or type" spellcheck="false" autocapitalize="characters">
-                <button type="button" class="btn" id="copyOpen" title="Copy the code and open itison in a new tab"><svg class="ic"><use href="#i-copy"/></svg>Open itison</button>
-              </div>
-              <div id="dupMsg" hidden></div>
+              <input class="input code" id="code" placeholder="Paste or type" spellcheck="false" autocapitalize="characters">
             </div>
+            <div class="f">
+              <label for="pin">PIN</label>
+              <input class="input code pin" id="pin" placeholder="0000" inputmode="numeric" maxlength="4" autocomplete="off" spellcheck="false">
+            </div>
+            <div class="f full" id="dupMsg" hidden></div>
             <div class="f s2">
               <label for="deal">Deal</label>
               <select class="select" id="deal"></select>
@@ -315,13 +334,24 @@ td.c,th.c{text-align:center}
               <label for="note">Note</label>
               <input class="input" id="note" placeholder="Split bill, extra drinks…">
             </div>
-            <div class="f full switch-row">
-              <label class="switch"><input type="checkbox" id="alreadyRedeemed" checked><span class="track"></span>Redeemed on itison</label>
-              <button type="button" class="btn" id="addNote"><svg class="ic"><use href="#i-plus"/></svg>Note</button>
-            </div>
           </div>
           <div class="actions">
-            <button type="submit" class="btn primary block lg">Log voucher</button>
+            <button type="submit" class="btn primary block lg"><svg class="ic"><use href="#i-external"/></svg>Redeem on itison</button>
+            <div class="sub-actions"><span class="help">Copies the code and opens itison. Nothing is logged until itison accepts it.</span><button type="button" class="btn sm" id="addNote"><svg class="ic"><use href="#i-plus"/></svg>Note</button></div>
+          </div>
+        </div>
+
+        <div class="panel-body" id="stageB" hidden>
+          <p class="stage-lead">Enter these on itison, then come back and say whether it was accepted.</p>
+          <div class="redeem-box">
+            <div class="redeem-row"><span class="lbl">Code</span><span class="big" id="rCode"></span><button type="button" class="btn sm" data-copy="code"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+            <div class="redeem-row"><span class="lbl">PIN</span><span class="big" id="rPin"></span><button type="button" class="btn sm" data-copy="pin"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
+          </div>
+          <p class="help" id="rSummary" style="margin:12px 0 0"></p>
+          <div class="actions">
+            <button type="button" class="btn ok block lg" id="redeemOk"><svg class="ic"><use href="#i-check"/></svg>Accepted, log it</button>
+            <button type="button" class="btn danger block" id="redeemBad"><svg class="ic"><use href="#i-x"/></svg>itison rejected it</button>
+            <div class="sub-actions"><button type="button" class="btn sm" id="redeemBack">Back to details</button><button type="button" class="btn sm" id="reopen"><svg class="ic"><use href="#i-external"/></svg>Open itison again</button></div>
           </div>
         </div>
       </form>
@@ -342,6 +372,10 @@ td.c,th.c{text-align:center}
         <div id="doneGroup" hidden>
           <div class="group-label">Done<span class="n" id="doneN"></span></div>
           <div id="doneList"></div>
+        </div>
+        <div id="rejGroup" hidden>
+          <div class="group-label">Rejected by itison<span class="n" id="rejN"></span></div>
+          <div id="rejList"></div>
         </div>
         <div id="listEmpty" class="empty">
           <svg class="ic"><use href="#i-inbox"/></svg>
@@ -494,7 +528,9 @@ function nightOf(ts){ const d = new Date(ts - DAY_START_HOUR*3600e3); return d.g
 const tonight = () => nightOf(Date.now());
 function niceNight(n){ const [y,m,d] = n.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}); }
 const timeOf = ts => new Date(ts).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-const live = () => state.vouchers.filter(v => !v.deleted);
+const kept = () => state.vouchers.filter(v => !v.deleted);
+const live = () => kept().filter(v => v.status !== 'rejected');     // accepted by itison
+const rejectedList = () => kept().filter(v => v.status === 'rejected');
 const isDone = v => STEPS.every(([k]) => v.steps[k]);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 const plural = (n, one, many) => n === 1 ? one : (many || one + 's');
@@ -544,61 +580,94 @@ $('staff').addEventListener('change', e => pref('lastStaff', e.target.value));
 function dupCheck(){
   const n = norm($('code').value);
   const hit = n.length >= 4 && live().find(v => norm(v.code) === n);
-  $('dupMsg').hidden = !hit;
-  $('dupMsg').innerHTML = hit ? `<div class="field-alert">${icon('alert')}<span>Already logged ${niceNight(hit.night)} at ${timeOf(hit.at)} by ${esc(hit.staff||'someone')}, table ${esc(hit.table||'?')}. Don't redeem it twice.</span></div>` : '';
+  const rej = !hit && n.length >= 4 && rejectedList().filter(v => norm(v.code) === n).pop();
+  $('dupMsg').hidden = !hit && !rej;
+  $('dupMsg').innerHTML = hit
+    ? `<div class="field-alert">${icon('alert')}<span>Already redeemed ${niceNight(hit.night)} at ${timeOf(hit.at)} by ${esc(hit.staff||'someone')}, table ${esc(hit.table||'?')}. Don't redeem it twice.</span></div>`
+    : rej ? `<div class="field-alert" style="background:var(--warn-soft);color:var(--warn)">${icon('alert')}<span>itison rejected this code ${niceNight(rej.night)} at ${timeOf(rej.at)}. Double-check the code and PIN with the customer.</span></div>` : '';
   return hit;
 }
 $('code').addEventListener('input', dupCheck);
-
+$('pin').addEventListener('input', () => { const p = $('pin'); const d = p.value.replace(/\D/g,'').slice(0,4); if (d !== p.value) p.value = d; });
 $('addNote').addEventListener('click', () => { $('noteWrap').hidden = false; $('addNote').hidden = true; $('note').focus(); });
 
-/* ---------- copy + open itison ---------- */
-$('copyOpen').addEventListener('click', async () => {
-  const code = $('code').value.trim();
-  let copied = false;
-  if (code) { try { await navigator.clipboard.writeText(code); copied = true; } catch(e){ $('code').select(); } }
+/* ---------- step 1 → 2: check details, copy the code, open itison ---------- */
+let pending = null;   // the voucher being redeemed; its PIN lives only here, in memory, never saved
+async function copyText(text, label){
+  try { await navigator.clipboard.writeText(text); toast(`${label} copied.`); return true; }
+  catch(e){ toast(`Couldn't copy. Type the ${label.toLowerCase()} instead.`, 'warn'); return false; }
+}
+function openItison(){
   const url = state.settings.hubUrl;
-  if (!url) { toast((copied ? 'Code copied. ' : '') + 'Add the itison link in Settings so this button can open it.', 'warn'); return; }
+  if (!url) { toast('Add the itison link in Settings so this button can open it.', 'warn'); return; }
   window.open(url, '_blank', 'noopener');
-  toast(copied ? 'Code copied. Paste it into itison, then come back and log it.' : 'itison opened in a new tab.');
-});
-
-/* ---------- add ---------- */
-let flashId = null;
-$('addForm').addEventListener('submit', e => {
+}
+function setStage(b){
+  $('stageA').hidden = b; $('stageB').hidden = !b;
+  const s = $('stepper').children; s[0].classList.toggle('on', !b); s[1].classList.toggle('on', b);
+}
+$('addForm').addEventListener('submit', async e => {
   e.preventDefault();
   const code = $('code').value.trim().toUpperCase();
+  const pin = $('pin').value.trim();
   if (!code) { toast('Enter the voucher code first.', 'bad'); $('code').focus(); return; }
-  if (dupCheck()) { toast('That code is already logged. Check before redeeming it again.', 'bad'); return; }
+  if (dupCheck()) { toast('That code is already redeemed. Check before trying again.', 'bad'); return; }
+  if (!/^\d{4}$/.test(pin)) { toast('The PIN is 4 digits.', 'bad'); $('pin').focus(); return; }
   const value = parseFloat($('value').value);
   if (!(value >= 0)) { toast('Enter the till amount.', 'bad'); $('value').focus(); return; }
-  const dealSel = $('deal').value, now = Date.now();
-  const v = {
-    id: uid(), code, at: now, night: nightOf(now),
+  const dealSel = $('deal').value;
+  pending = {
+    code, pin, value,
     table: $('table').value.trim(),
     deal: dealSel === 'custom' ? 'Other' : (state.settings.deals[dealSel]?.name || ''),
-    value, staff: $('staff').value, note: $('note').value.trim(),
-    steps: { itison: $('alreadyRedeemed').checked ? now : null, till: null, receipt: null }
+    staff: $('staff').value, note: $('note').value.trim()
   };
+  $('rCode').textContent = code; $('rPin').textContent = pin;
+  $('rSummary').textContent = `Table ${pending.table || '–'} · ${pending.deal || 'Other'} · ${money(value)} · ${pending.staff || 'No name'}`;
+  setStage(true);
+  copyText(code, 'Code');   // start the copy while this tab still has focus
+  openItison();
+});
+$('stageB').addEventListener('click', e => { const c = e.target.closest('[data-copy]'); if (c && pending) copyText(pending[c.dataset.copy], c.dataset.copy === 'pin' ? 'PIN' : 'Code'); });
+$('reopen').addEventListener('click', openItison);
+$('redeemBack').addEventListener('click', () => setStage(false));
+
+/* ---------- step 2 result ---------- */
+let flashId = null;
+function finish(accepted){
+  if (!pending) return;
+  const now = Date.now();
+  const v = {
+    id: uid(), code: pending.code, at: now, night: nightOf(now),
+    table: pending.table, deal: pending.deal, value: pending.value, staff: pending.staff, note: pending.note,
+    steps: { itison: accepted ? now : null, till: null, receipt: null }
+  };
+  if (!accepted) v.status = 'rejected';
   state.vouchers.push(v); save();
   flashId = v.id; setTimeout(() => { flashId = null; }, 1500);
-  $('code').value = ''; $('table').value = ''; $('note').value = ''; $('noteWrap').hidden = true; $('addNote').hidden = false; dupCheck();
-  toast(`Logged ${code}. Put ${money(value)} through the till as itison.`);
-  render(); $('code').focus();
-});
+  pending = null;
+  ['code','pin','table','note'].forEach(id => $(id).value = '');
+  $('noteWrap').hidden = true; $('addNote').hidden = false; dupCheck();
+  setStage(false); render(); $('code').focus();
+  if (accepted) toast(`${v.code} logged. Now put ${money(v.value)} through the till as itison.`);
+  else toast(`Marked as rejected. Let the customer know it didn't go through.`, 'warn');
+}
+$('redeemOk').addEventListener('click', () => finish(true));
+$('redeemBad').addEventListener('click', () => finish(false));
 
 /* ---------- list rows ---------- */
 function rowHTML(v){
   const steps = STEPS.map(([k,short,full]) =>
     `<button type="button" class="tog" data-id="${v.id}" data-step="${k}" aria-pressed="${!!v.steps[k]}" title="${full}${v.steps[k] ? ': done at '+timeOf(v.steps[k])+'. Tap to undo' : ': tap when done'}">${icon('check','on')}${icon('circle','off')}${short}</button>`).join('');
   const older = v.night !== tonight() ? `<span class="older">${niceNight(v.night)}</span>` : '';
-  return `<div class="vrow ${isDone(v)?'done':''} ${v.id===flashId?'flash':''}">
+  const rej = v.status === 'rejected';
+  return `<div class="vrow ${rej?'rejected':isDone(v)?'done':''} ${v.id===flashId?'flash':''}">
     <div class="vmain">
       <div class="vcode">${esc(v.code)}</div>
       <div class="vmeta">${older}<span>Table ${esc(v.table||'–')}</span><span>${esc(v.staff||'No name')}</span><span>${timeOf(v.at)}</span>${v.deal ? `<span>${esc(v.deal)}</span>` : ''}${v.note ? `<span>${esc(v.note)}</span>` : ''}</div>
     </div>
     <div class="vamt">${money(v.value)}</div>
-    <div class="vsteps" role="group" aria-label="Steps for ${esc(v.code)}">${steps}</div>
+    ${rej ? `<div class="vreject"><span class="pill bad">${icon('x')}Rejected by itison</span></div>` : `<div class="vsteps" role="group" aria-label="Steps for ${esc(v.code)}">${steps}</div>`}
     <div class="vdel"><button type="button" class="icon-btn" data-del="${v.id}" aria-label="Remove ${esc(v.code)}" title="Remove">${icon('trash')}</button></div>
   </div>`;
 }
@@ -637,7 +706,10 @@ function render(){
   $('openList').innerHTML = open.map(rowHTML).join('');
   $('doneGroup').hidden = !done.length; $('doneN').textContent = done.length;
   $('doneList').innerHTML = done.map(rowHTML).join('');
-  $('listEmpty').hidden = open.length + done.length > 0;
+  const rej = rejectedList().filter(v => v.night === n).sort((a,b) => b.at - a.at);
+  $('rejGroup').hidden = !rej.length; $('rejN').textContent = rej.length;
+  $('rejList').innerHTML = rej.map(rowHTML).join('');
+  $('listEmpty').hidden = open.length + done.length + rej.length > 0;
   $('storageBanner').hidden = storageOK;
 }
 
@@ -692,16 +764,17 @@ $('runCheck').addEventListener('click', () => {
 ['hFrom','hTo','hSearch'].forEach(id => $(id).addEventListener('input', renderHistory));
 function historyRows(){
   const f = $('hFrom').value, to = $('hTo').value, q = $('hSearch').value.trim().toLowerCase();
-  return live().filter(v => (!f || v.night >= f) && (!to || v.night <= to) &&
+  return kept().filter(v => (!f || v.night >= f) && (!to || v.night <= to) &&
     (!q || [v.code,v.table,v.staff,v.deal,v.note].join(' ').toLowerCase().includes(q))).sort((a,b) => b.at - a.at);
 }
 function renderHistory(){
   const rows = historyRows();
   const tick = ts => ts ? `<span class="yes" title="${timeOf(ts)}">${icon('check')}</span>` : `<span class="no" title="Not done">${icon('x')}</span>`;
-  $('hBody').innerHTML = rows.map(v => `<tr><td>${niceNight(v.night)}</td><td class="num">${timeOf(v.at)}</td><td class="mono">${esc(v.code)}</td><td>${esc(v.table)}</td><td>${esc(v.deal)}</td><td class="r num">${money(v.value)}</td><td>${esc(v.staff)}</td><td class="c">${tick(v.steps.itison)}</td><td class="c">${tick(v.steps.till)}</td><td class="c">${tick(v.steps.receipt)}</td><td class="r"><button type="button" class="icon-btn" data-del="${v.id}" aria-label="Remove ${esc(v.code)}" title="Remove">${icon('trash')}</button></td></tr>`).join('')
+  $('hBody').innerHTML = rows.map(v => `<tr><td>${niceNight(v.night)}</td><td class="num">${timeOf(v.at)}</td><td class="mono">${esc(v.code)}</td><td>${esc(v.table)}</td><td>${esc(v.deal)}</td><td class="r num">${money(v.value)}</td><td>${esc(v.staff)}</td>${v.status==='rejected' ? '<td class="c" colspan="3"><span class="pill bad">Rejected by itison</span></td>' : `<td class="c">${tick(v.steps.itison)}</td><td class="c">${tick(v.steps.till)}</td><td class="c">${tick(v.steps.receipt)}</td>`}<td class="r"><button type="button" class="icon-btn" data-del="${v.id}" aria-label="Remove ${esc(v.code)}" title="Remove">${icon('trash')}</button></td></tr>`).join('')
     || `<tr><td colspan="11"><div class="empty"><strong>No vouchers match</strong><p>Try a wider date range or a different search.</p></div></td></tr>`;
-  $('hSummary').textContent = `${rows.length} ${plural(rows.length,'voucher')}`;
-  $('hTotal').textContent = money(rows.reduce((s,v)=>s+v.value,0));
+  const acc = rows.filter(v => v.status !== 'rejected'); const nRej = rows.length - acc.length;
+  $('hSummary').textContent = `${acc.length} ${plural(acc.length,'voucher')}` + (nRej ? ` · ${nRej} rejected` : '');
+  $('hTotal').textContent = money(acc.reduce((s,v)=>s+v.value,0));
   const pill = (ok, okText, badText) => ok == null ? '<span class="pill mute">Not checked</span>' : ok ? `<span class="pill ok">${okText}</span>` : `<span class="pill bad">${badText}</span>`;
   $('cBody').innerHTML = [...state.checks].sort((a,b) => b.at - a.at).map(c => `<tr><td>${niceNight(c.night)}</td><td>${esc(c.by)||'–'}</td><td class="r num">${money(c.logged)}</td><td class="r num">${c.till==null?'–':money(c.till)}</td><td>${pill(c.diff==null?null:c.diff===0,'Matched',(c.diff>0?'+':'−')+money(Math.abs(c.diff||0)))}</td><td>${pill(c.missing==null?null:c.missing===0,'All on itison',`${c.missing} missing`)}</td></tr>`).join('')
     || `<tr><td colspan="6"><div class="empty"><strong>No checks yet</strong><p>Run one from the End of shift tab and it's saved here.</p></div></td></tr>`;
@@ -715,8 +788,8 @@ function download(name, text, type){
 $('csvBtn').addEventListener('click', () => {
   const q = s => '"' + String(s ?? '').replace(/"/g,'""') + '"';
   const t = ts => ts ? new Date(ts).toLocaleString('en-GB') : '';
-  const lines = [['Night','Logged at','Code','Table','Deal','Till amount','Logged by','Redeemed on itison','Put through till','Receipt in till','Note'].map(q).join(',')];
-  historyRows().slice().reverse().forEach(v => lines.push([v.night, t(v.at), v.code, v.table, v.deal, v.value.toFixed(2), v.staff, t(v.steps.itison), t(v.steps.till), t(v.steps.receipt), v.note].map(q).join(',')));
+  const lines = [['Night','Logged at','Code','Table','Deal','Till amount','Logged by','Redeemed on itison','Put through till','Receipt in till','Note','Status'].map(q).join(',')];
+  historyRows().slice().reverse().forEach(v => lines.push([v.night, t(v.at), v.code, v.table, v.deal, v.value.toFixed(2), v.staff, t(v.steps.itison), t(v.steps.till), t(v.steps.receipt), v.note, v.status === 'rejected' ? 'Rejected by itison' : 'Redeemed'].map(q).join(',')));
   download(`itison-vouchers-${tonight()}.csv`, lines.join('\r\n'), 'text/csv');
   toast('Spreadsheet downloaded.');
 });

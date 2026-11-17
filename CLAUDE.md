@@ -8,3 +8,5 @@ The owner is a beginner and a restaurant supervisor, and they usually edit from 
 - No real data goes in the repo (it's public): no staff names, codes or restaurant name. Those are entered in the app's Settings.
 - No API for itison or Waiter Mate (the till, by OrderMate). The end of shift check works on the itison Hub text the user pastes in.
 - A "night" runs 5am to 5am (`DAY_START_HOUR`).
+- Flow: details (code, PIN, deal, table) → redeem on itison → "Accepted" logs it with the itison step ticked, "Rejected" saves it with `status: 'rejected'` (left out of every total). **The PIN is held in memory only and is never saved.** Keep it that way.
+- One device: everyone brings vouchers to the host desk laptop, so the log lives there. Don't add a shared database unless that changes.
