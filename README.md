@@ -4,7 +4,7 @@ A single page that replaces the paper checklist and the Excel sheet for itison v
 It is just `index.html`. It needs no install, no logins and no internet (the fonts fall back if it's offline).
 
 ## Putting it on the host desk laptop
-1. Open https://spongebakka.github.io/voucher-desk/ in Chrome and bookmark it. It updates about a minute after a change lands on `main`.
+1. Open https://voucher-desk.netlify.app/ in Chrome and bookmark it. It updates about a minute after a change lands on `main`.
 2. Go to Settings and add the staff names, the real deals with their till amounts, and the itison redemption page link.
 
 Offline fallback: save `index.html` somewhere permanent and open it. That copy keeps its own separate log.
