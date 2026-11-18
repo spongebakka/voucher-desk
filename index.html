@@ -184,7 +184,11 @@ button:focus-visible,.tab:focus-visible,.btn:focus-visible{outline:2px solid var
 .vmeta .older{color:var(--warn);font-weight:600}
 .vamt{grid-area:amt;text-align:right;font-weight:600;font-size:16px;font-variant-numeric:tabular-nums}
 .vsteps{grid-area:steps;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-.vdel{grid-area:del;justify-self:end}
+.vdel{grid-area:del;justify-self:end;display:flex;gap:2px}
+dialog.edit{border:0;padding:0;border-radius:var(--r);background:var(--surface);color:var(--ink);box-shadow:0 20px 60px rgb(0 0 0 / .25);width:min(560px,calc(100% - 32px))}
+.nowrap{white-space:nowrap}
+dialog.edit::backdrop{background:rgb(10 14 30 / .45)}
+dialog.edit .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
 .tog{height:36px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--r-sm);border:1px dashed var(--warn-line);background:var(--warn-soft);color:var(--warn);font-size:13px;font-weight:600;cursor:pointer;padding:0 6px;white-space:nowrap;min-width:0}
 .tog .ic{width:15px;height:15px;stroke-width:2.4}
 .tog .on{display:none}
@@ -284,6 +288,7 @@ td.c,th.c{text-align:center}
   <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></symbol>
   <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 20V9M7 14l5-5 5 5M5 4h14"/></symbol>
   <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 5h13L21 13v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5z"/></symbol>
 </svg>
@@ -321,14 +326,6 @@ td.c,th.c{text-align:center}
               <input class="input code pin" id="pin" placeholder="0000" inputmode="numeric" maxlength="4" autocomplete="off" spellcheck="false">
             </div>
             <div class="f full" id="dupMsg" hidden></div>
-            <div class="f s2">
-              <label for="deal">Deal</label>
-              <select class="select" id="deal"></select>
-            </div>
-            <div class="f">
-              <label for="value">Till amount</label>
-              <div class="money"><input class="input num" id="value" type="number" step="0.01" min="0" inputmode="decimal"></div>
-            </div>
             <div class="f">
               <label for="table">Table</label>
               <input class="input" id="table" inputmode="numeric" placeholder="12">
@@ -355,7 +352,18 @@ td.c,th.c{text-align:center}
             <div class="redeem-row"><span class="lbl">PIN</span><span class="big" id="rPin"></span><button type="button" class="btn sm" data-copy="pin"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
           </div>
           <p class="help" id="rSummary" style="margin:12px 0 0"></p>
-          <div class="actions">
+          <p class="stage-lead" style="margin:18px 0 10px">Once itison accepts it, pick the deal it shows.</p>
+          <div class="fields compact">
+            <div class="f s2">
+              <label for="deal">Deal</label>
+              <select class="select" id="deal"></select>
+            </div>
+            <div class="f">
+              <label for="value">Till amount</label>
+              <div class="money"><input class="input num" id="value" type="number" step="0.01" min="0" inputmode="decimal"></div>
+            </div>
+          </div>
+          <div class="actions" style="margin-top:16px">
             <button type="button" class="btn ok block lg" id="redeemOk"><svg class="ic"><use href="#i-check"/></svg>Accepted, log it</button>
             <button type="button" class="btn danger block" id="redeemBad"><svg class="ic"><use href="#i-x"/></svg>itison rejected it</button>
             <div class="sub-actions"><button type="button" class="btn sm" id="redeemBack">Back to details</button><button type="button" class="btn sm" id="reopen"><svg class="ic"><use href="#i-external"/></svg>Open itison again</button></div>
@@ -509,6 +517,24 @@ td.c,th.c{text-align:center}
   </section>
 </main>
 
+<dialog class="edit" id="editDlg">
+  <form method="dialog" id="editForm" autocomplete="off" novalidate>
+    <div class="panel-head"><h2>Edit voucher</h2><button class="icon-btn" type="button" id="editClose" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button></div>
+    <div class="panel-body">
+      <div class="fields compact">
+        <div class="f s2"><label for="eCode">Voucher code</label><input class="input code" id="eCode" spellcheck="false" autocapitalize="characters"></div>
+        <div class="f"><label for="ePin">PIN</label><input class="input code pin" id="ePin" inputmode="numeric" maxlength="4"></div>
+        <div class="f s2"><label for="eDeal">Deal</label><select class="select" id="eDeal"></select></div>
+        <div class="f"><label for="eValue">Till amount</label><div class="money"><input class="input num" id="eValue" type="number" step="0.01" min="0" inputmode="decimal"></div></div>
+        <div class="f"><label for="eTable">Table</label><input class="input" id="eTable" inputmode="numeric"></div>
+        <div class="f s2"><label for="eStaff">Logged by</label><select class="select" id="eStaff"></select></div>
+        <div class="f full"><label for="eNote">Note</label><input class="input" id="eNote" placeholder="Split bill, extra drinks…"></div>
+      </div>
+      <div class="actions"><button class="btn" type="button" id="editCancel">Cancel</button><button class="btn primary" type="submit">Save changes</button></div>
+    </div>
+  </form>
+</dialog>
+
 <div class="toast" id="toast" role="status" aria-live="polite"><svg class="ic"><use href="#i-check"/></svg><span></span></div>
 
 <script>
@@ -574,12 +600,13 @@ function fillSelects(){
     if (last && staff.includes(last)) $(id).value = last;
   }
   const keep = $('deal').value;
-  $('deal').innerHTML = state.settings.deals.map((d,i) => `<option value="${i}">${esc(d.name)} · ${money(d.value)}</option>`).join('') + '<option value="custom">Other amount</option>';
+  $('deal').innerHTML = (state.settings.deals.length > 1 ? '<option value="">Pick the deal itison shows</option>' : '') + dealOptions();
   if (keep && [...$('deal').options].some(o => o.value === keep)) $('deal').value = keep;
   if (!$('value').value) syncDeal();
   $('setupNotice').hidden = staff.length > 0;
 }
-function syncDeal(){ const d = state.settings.deals[$('deal').value]; if (d) $('value').value = d.value; }
+function dealOptions(){ return state.settings.deals.map((d,i) => `<option value="${i}">${esc(d.name)} · ${money(d.value)}</option>`).join('') + '<option value="custom">Other amount</option>'; }
+function syncDeal(){ const v = $('deal').value, d = state.settings.deals[v]; if (d) $('value').value = d.value; else if (v === '') $('value').value = ''; }
 $('deal').addEventListener('change', syncDeal);
 $('staff').addEventListener('change', e => pref('lastStaff', e.target.value));
 
@@ -620,17 +647,9 @@ $('addForm').addEventListener('submit', async e => {
   if (!code) { toast('Enter the voucher code first.', 'bad'); $('code').focus(); return; }
   if (dupCheck()) { toast('That code is already redeemed. Check before trying again.', 'bad'); return; }
   if (!/^\d{4}$/.test(pin)) { toast('The PIN is 4 digits.', 'bad'); $('pin').focus(); return; }
-  const value = parseFloat($('value').value);
-  if (!(value >= 0)) { toast('Enter the till amount.', 'bad'); $('value').focus(); return; }
-  const dealSel = $('deal').value;
-  pending = {
-    code, pin, value,
-    table: $('table').value.trim(),
-    deal: dealSel === 'custom' ? 'Other' : (state.settings.deals[dealSel]?.name || ''),
-    staff: $('staff').value, note: $('note').value.trim()
-  };
+  pending = { code, pin, table: $('table').value.trim(), staff: $('staff').value, note: $('note').value.trim() };
   $('rCode').textContent = code; $('rPin').textContent = pin;
-  $('rSummary').textContent = `Table ${pending.table || '–'} · ${pending.deal || 'Other'} · ${money(value)} · ${pending.staff || 'No name'}`;
+  $('rSummary').textContent = `Table ${pending.table || '–'} · ${pending.staff || 'No name'}`;
   setStage(true);
   copyText(code, 'Code');   // start the copy while this tab still has focus
   openItison();
@@ -643,10 +662,14 @@ $('redeemBack').addEventListener('click', () => setStage(false));
 let flashId = null;
 function finish(accepted){
   if (!pending) return;
+  const dealSel = $('deal').value, value = parseFloat($('value').value);
+  if (accepted && dealSel === '') { toast('Pick the deal itison shows first.', 'bad'); $('deal').focus(); return; }
+  if (accepted && !(value >= 0)) { toast('Enter the till amount.', 'bad'); $('value').focus(); return; }
+  const deal = !accepted ? '' : dealSel === 'custom' ? 'Other' : (state.settings.deals[dealSel]?.name || '');
   const now = Date.now();
   const v = {
     id: uid(), code: pending.code, at: now, night: nightOf(now),
-    pin: pending.pin, table: pending.table, deal: pending.deal, value: pending.value, staff: pending.staff, note: pending.note,
+    pin: pending.pin, table: pending.table, deal, value: accepted ? value : 0, staff: pending.staff, note: pending.note,
     steps: { itison: accepted ? now : null, till: null, receipt: null }
   };
   if (!accepted) v.status = 'rejected';
@@ -655,6 +678,7 @@ function finish(accepted){
   pending = null;
   ['code','pin','table','note'].forEach(id => $(id).value = '');
   $('noteWrap').hidden = true; $('addNote').hidden = false; dupCheck();
+  if (state.settings.deals.length > 1) { $('deal').value = ''; syncDeal(); }
   setStage(false); render(); $('code').focus();
   if (accepted) toast(`${v.code} logged. Now put ${money(v.value)} through the till as itison.`);
   else toast(`Marked as rejected. Let the customer know it didn't go through.`, 'warn');
@@ -675,11 +699,45 @@ function rowHTML(v){
     </div>
     <div class="vamt">${money(v.value)}</div>
     ${rej ? `<div class="vreject"><span class="pill bad">${icon('x')}Rejected by itison</span></div>` : `<div class="vsteps" role="group" aria-label="Steps for ${esc(v.code)}">${steps}</div>`}
-    <div class="vdel"><button type="button" class="icon-btn" data-del="${v.id}" aria-label="Remove ${esc(v.code)}" title="Remove">${icon('trash')}</button></div>
+    <div class="vdel"><button type="button" class="icon-btn" data-edit="${v.id}" aria-label="Edit ${esc(v.code)}" title="Edit">${icon('edit')}</button><button type="button" class="icon-btn" data-del="${v.id}" aria-label="Remove ${esc(v.code)}" title="Remove">${icon('trash')}</button></div>
   </div>`;
 }
 
+/* ---------- edit a logged voucher ---------- */
+let editing = null;
+function openEdit(id){
+  const v = state.vouchers.find(x => x.id === id); if (!v) return;
+  editing = v;
+  $('eCode').value = v.code; $('ePin').value = v.pin || ''; $('eTable').value = v.table || ''; $('eNote').value = v.note || ''; $('eValue').value = v.value;
+  const i = state.settings.deals.findIndex(d => d.name === v.deal);
+  $('eDeal').innerHTML = (i < 0 && v.deal && v.deal !== 'Other' ? `<option value="keep">${esc(v.deal)}</option>` : '') + dealOptions();
+  $('eDeal').value = i >= 0 ? String(i) : v.deal && v.deal !== 'Other' ? 'keep' : 'custom';
+  const staff = state.settings.staff.includes(v.staff) || !v.staff ? state.settings.staff : [v.staff, ...state.settings.staff];
+  $('eStaff').innerHTML = staff.map(s => `<option>${esc(s)}</option>`).join('') || '<option value="">No names yet</option>';
+  $('eStaff').value = v.staff || staff[0] || '';
+  $('editDlg').showModal(); $('eTable').focus();
+}
+$('eDeal').addEventListener('change', () => { const d = state.settings.deals[$('eDeal').value]; if (d) $('eValue').value = d.value; });
+$('ePin').addEventListener('input', () => { const p = $('ePin'); const d = p.value.replace(/\D/g,'').slice(0,4); if (d !== p.value) p.value = d; });
+['editClose','editCancel'].forEach(id => $(id).addEventListener('click', () => $('editDlg').close()));
+$('editForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = editing; if (!v) return;
+  const code = $('eCode').value.trim().toUpperCase(), pin = $('ePin').value.trim(), value = parseFloat($('eValue').value);
+  if (!code) { toast('The code can\'t be empty.', 'bad'); $('eCode').focus(); return; }
+  if (pin && !/^\d{4}$/.test(pin)) { toast('The PIN is 4 digits.', 'bad'); $('ePin').focus(); return; }
+  if (!(value >= 0)) { toast('Enter the till amount.', 'bad'); $('eValue').focus(); return; }
+  if (v.status !== 'rejected' && live().some(x => x !== v && norm(x.code) === norm(code))) { toast('Another logged voucher already has that code.', 'bad'); $('eCode').focus(); return; }
+  const ds = $('eDeal').value;
+  Object.assign(v, { code, pin, value, table: $('eTable').value.trim(), staff: $('eStaff').value, note: $('eNote').value.trim(),
+    deal: ds === 'keep' ? v.deal : ds === 'custom' ? 'Other' : (state.settings.deals[ds]?.name || v.deal) });
+  save(); render(); if (!$('tab-history').hidden) renderHistory();
+  $('editDlg').close(); toast(`${v.code} updated.`);
+});
+
 document.addEventListener('click', e => {
+  const ed = e.target.closest('[data-edit]');
+  if (ed) { openEdit(ed.dataset.edit); return; }
   const s = e.target.closest('.tog');
   if (s) { const v = state.vouchers.find(x => x.id === s.dataset.id); v.steps[s.dataset.step] = v.steps[s.dataset.step] ? null : Date.now(); save(); render(); if (isDone(v)) toast(`${v.code} is all done.`); return; }
   const d = e.target.closest('[data-del]');
@@ -777,7 +835,7 @@ function historyRows(){
 function renderHistory(){
   const rows = historyRows();
   const tick = ts => ts ? `<span class="yes" title="${timeOf(ts)}">${icon('check')}</span>` : `<span class="no" title="Not done">${icon('x')}</span>`;
-  $('hBody').innerHTML = rows.map(v => `<tr><td>${niceNight(v.night)}</td><td class="num">${timeOf(v.at)}</td><td class="mono">${esc(v.code)}</td><td class="mono">${esc(v.pin||'–')}</td><td>${esc(v.table)}</td><td>${esc(v.deal)}</td><td class="r num">${money(v.value)}</td><td>${esc(v.staff)}</td>${v.status==='rejected' ? '<td class="c" colspan="3"><span class="pill bad">Rejected by itison</span></td>' : `<td class="c">${tick(v.steps.itison)}</td><td class="c">${tick(v.steps.till)}</td><td class="c">${tick(v.steps.receipt)}</td>`}<td class="r"><button type="button" class="icon-btn" data-del="${v.id}" aria-label="Remove ${esc(v.code)}" title="Remove">${icon('trash')}</button></td></tr>`).join('')
+  $('hBody').innerHTML = rows.map(v => `<tr><td>${niceNight(v.night)}</td><td class="num">${timeOf(v.at)}</td><td class="mono">${esc(v.code)}</td><td class="mono">${esc(v.pin||'–')}</td><td>${esc(v.table)}</td><td>${esc(v.deal)}</td><td class="r num">${money(v.value)}</td><td>${esc(v.staff)}</td>${v.status==='rejected' ? '<td class="c" colspan="3"><span class="pill bad">Rejected by itison</span></td>' : `<td class="c">${tick(v.steps.itison)}</td><td class="c">${tick(v.steps.till)}</td><td class="c">${tick(v.steps.receipt)}</td>`}<td class="r nowrap"><button type="button" class="icon-btn" data-edit="${v.id}" aria-label="Edit ${esc(v.code)}" title="Edit">${icon('edit')}</button><button type="button" class="icon-btn" data-del="${v.id}" aria-label="Remove ${esc(v.code)}" title="Remove">${icon('trash')}</button></td></tr>`).join('')
     || `<tr><td colspan="12"><div class="empty"><strong>No vouchers match</strong><p>Try a wider date range or a different search.</p></div></td></tr>`;
   const acc = rows.filter(v => v.status !== 'rejected'); const nRej = rows.length - acc.length;
   $('hSummary').textContent = `${acc.length} ${plural(acc.length,'voucher')}` + (nRej ? ` · ${nRej} rejected` : '');
