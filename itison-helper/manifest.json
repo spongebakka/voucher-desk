@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Voucher Desk itison helper",
+  "version": "1.0",
+  "description": "Fills the voucher code into the itison Hub search box when Voucher Desk opens it.",
+  "content_scripts": [
+    {
+      "matches": ["https://itison.com/hub/*", "https://www.itison.com/hub/*"],
+      "js": ["fill-code.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

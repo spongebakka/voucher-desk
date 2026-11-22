@@ -341,7 +341,7 @@ td.c,th.c{text-align:center}
           </div>
           <div class="actions">
             <button type="submit" class="btn primary block lg"><svg class="ic"><use href="#i-external"/></svg>Redeem on itison</button>
-            <div class="sub-actions"><span class="help">Copies the code and opens itison. Nothing is logged until itison accepts it.</span><button type="button" class="btn sm" id="addNote"><svg class="ic"><use href="#i-plus"/></svg>Note</button></div>
+            <div class="sub-actions"><span class="help">Copies the PIN and opens itison with the code filled in. Nothing is logged until itison accepts it.</span><button type="button" class="btn sm" id="addNote"><svg class="ic"><use href="#i-plus"/></svg>Note</button></div>
           </div>
         </div>
 
@@ -498,6 +498,7 @@ td.c,th.c{text-align:center}
               <label for="hubUrl">Redemption page address</label>
               <input class="input" id="hubUrl" placeholder="https://" inputmode="url" spellcheck="false">
               <p class="help">Copy it from the laptop's address bar while you're on the itison redemption page.</p>
+              <p class="help">To have the voucher code filled in on itison automatically, install the <a href="https://github.com/spongebakka/voucher-desk/tree/main/itison-helper" target="_blank" rel="noopener">itison helper add-on</a> in Chrome on this laptop.</p>
             </div>
           </div>
         </div>
@@ -634,7 +635,9 @@ async function copyText(text, label){
 function openItison(){
   const url = state.settings.hubUrl;
   if (!url) { toast('Add the itison link in Settings so this button can open it.', 'warn'); return; }
-  window.open(url, '_blank', 'noopener');
+  // The code rides along after the # so the itison helper add-on can fill it in. It never reaches itison's server.
+  const code = pending ? '#vd-code=' + encodeURIComponent(pending.code) : '';
+  window.open(url.split('#')[0] + code, '_blank', 'noopener');
 }
 function setStage(b){
   $('stageA').hidden = b; $('stageB').hidden = !b;
@@ -651,7 +654,7 @@ $('addForm').addEventListener('submit', async e => {
   $('rCode').textContent = code; $('rPin').textContent = pin;
   $('rSummary').textContent = `Table ${pending.table || '–'} · ${pending.staff || 'No name'}`;
   setStage(true);
-  copyText(code, 'Code');   // start the copy while this tab still has focus
+  copyText(pin, 'PIN');   // start the copy while this tab still has focus (the helper add-on fills in the code)
   openItison();
 });
 $('stageB').addEventListener('click', e => { const c = e.target.closest('[data-copy]'); if (c && pending) copyText(pending[c.dataset.copy], c.dataset.copy === 'pin' ? 'PIN' : 'Code'); });
