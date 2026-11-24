@@ -720,6 +720,10 @@ window.addEventListener('message', e => {
   if (pick.i >= 0) { $('deal').value = String(pick.i); syncDeal(); }
   if (m.status === 'already') {
     showItison('bad', `itison says this code was already used${m.usedAt ? ` (${esc(m.usedAt)})` : ''}. If that was you just now, press Accepted. Otherwise check with the customer.`);
+  } else if (m.status === 'badpin') {
+    showItison('bad', `itison says the <b>PIN is wrong</b>. Nothing was redeemed. Check the PIN with the customer, press <b>Back to details</b> to fix it, then Redeem on itison again.`);
+  } else if (m.status === 'notfound' || m.status === 'badcode') {
+    showItison('bad', `itison ${m.status === 'badcode' ? "says that isn't a full voucher code" : "didn't find this code"}. Check the code with the customer, press <b>Back to details</b> to fix it, then Redeem on itison again.`);
   } else if (m.status === 'other') {
     showItison('bad', `itison says this voucher is <b>${esc(m.label)}</b>. Check with the customer before going any further.`);
   } else if (m.status === 'valid') {

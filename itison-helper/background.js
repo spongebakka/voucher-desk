@@ -15,7 +15,7 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     const mine = desks.filter((t, i) => squash(pending[i]) === squash(msg.result.code));
     for (const t of mine.length ? mine : desks) send(t.id, msg);
     const back = mine[0] || desks.find(t => t.id === sender.tab?.openerTabId) || (desks.length === 1 ? desks[0] : null);
-    if (msg.result.status === 'redeemed' && back) {
+    if (msg.result.status !== 'valid' && back) {   // finished (well or not): go back to Voucher Desk
       chrome.tabs.update(back.id, { active: true });
       chrome.windows.update(back.windowId, { focused: true });
     }

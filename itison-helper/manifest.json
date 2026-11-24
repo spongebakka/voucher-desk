@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Voucher Desk itison helper",
-  "version": "2.5",
+  "version": "2.6",
   "description": "Fills in the code and PIN on the itison Hub, then tells Voucher Desk when a voucher is redeemed.",
   "background": {
     "service_worker": "background.js"
