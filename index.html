@@ -1158,9 +1158,36 @@ function renderHistoryCheck(){
       ${hCheck.open.has(x.n) ? `<tr class="hc-detail"><td colspan="8">${x.out.join('')}</td></tr>` : ''}`).join('')}</tbody>
       <tfoot><tr class="hc-total"><td>Total</td><td class="r num">${all.length}</td><td class="deals">${byDeal(all) || '–'}</td><td class="r num">${rev(all)}</td><td class="r num">${logged}</td><td class="r num">${money(loggedRev)}</td><td colspan="2">${problems ? `${problems} ${plural(problems,'night')} to check` : 'Every night matches'}</td></tr></tfoot>
     </table></div>
-    ${allRev.unpriced ? `<div class="table-foot"><span>${allRev.unpriced} ${plural(allRev.unpriced,'voucher')} from itison ${allRev.unpriced===1?"isn't":"aren't"} in the itison revenue, because ${allRev.unpriced===1?'its deal isn\'t':'their deals aren\'t'} matched to one of yours. Match them in Settings → itison deal matches.</span></div>` : ''}`
+    ${allRev.unpriced ? unmatchedHTML(all) : ''}`
     : `<div class="panel-body"><p class="help">Nothing redeemed on itison or logged between ${niceNight(from)} and ${niceNight(to)}.</p></div>`);
 }
+// itison deals in the check that aren't matched to one of your deals (so they can't be priced): match them right here.
+function unmatchedHTML(rows){
+  const known = t => state.settings.deals.some(d => d.name === state.settings.itisonDeals[t]);
+  const titles = [...new Set(rows.filter(r => !known(r.title)).map(r => r.title || ''))].filter(Boolean);
+  unmatchedTitles = titles;
+  const loggedDeal = t => { const codes = new Set(rows.filter(r => r.title === t).map(r => norm(r.code))); const v = live().find(v => codes.has(norm(v.code)) && state.settings.deals.some(d => d.name === v.deal)); return v ? v.deal : ''; };
+  return `<div class="panel-body" style="border-top:1px solid var(--line)">
+    <p class="help" style="margin:0 0 10px">${titles.length === 1 ? 'This itison deal isn\'t' : 'These itison deals aren\'t'} matched to one of your deals yet, so ${titles.length === 1 ? 'it isn\'t' : 'they aren\'t'} in the itison revenue. Pick the deal each one goes through the till as. If it isn't in the list, add it in Settings → Deals first.</p>
+    <div class="fix-list">${titles.map((t,i) => { const guess = loggedDeal(t);
+      return `<div class="fix-row" style="grid-template-columns:minmax(0,1fr) 260px"><span class="fx"><b style="font-family:inherit">${esc(t)}</b>${rows.filter(r => r.title === t).length} in this check</span>
+        <select class="select" data-match-title="${i}" aria-label="Deal for ${esc(t)}"><option value="">Pick the deal</option>${state.settings.deals.map((d,j) => `<option value="${j}" ${d.name===guess?'selected':''}>${esc(d.name)} · ${money(d.value)}</option>`).join('')}</select></div>`; }).join('')}</div>
+    ${titles.some(t => loggedDeal(t)) ? '<p class="help" style="margin:8px 0 0">Pre-picked from how the voucher was logged. Change it if that\'s wrong.</p>' : ''}
+    <div class="fix-all"><button type="button" class="btn sm primary" id="matchSave">Save ${titles.length === 1 ? 'match' : 'matches'}</button></div>
+  </div>`;
+}
+let unmatchedTitles = [];
+function saveMatch(sel){
+  const d = state.settings.deals[sel.value], t = unmatchedTitles[+sel.dataset.matchTitle];
+  if (!d || !t) return false;
+  state.settings.itisonDeals[t] = d.name; return true;
+}
+$('hCheckOut').addEventListener('click', e => {
+  if (e.target.id !== 'matchSave') return;
+  const n = [...document.querySelectorAll('[data-match-title]')].filter(saveMatch).length;
+  if (!n) { toast('Pick a deal first.', 'bad'); return; }
+  save(); toast(`${n} ${plural(n,'match','matches')} saved.`); renderHistoryCheck();
+});
 $('hCheckOut').addEventListener('click', e => {
   const row = e.target.closest('.hc-row'); if (!row) return;
   const n = row.dataset.hc; hCheck.open.has(n) ? hCheck.open.delete(n) : hCheck.open.add(n);
