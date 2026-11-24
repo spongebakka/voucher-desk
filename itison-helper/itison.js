@@ -7,11 +7,18 @@
 // If itison says the voucher was already used, it tells Voucher Desk and leaves the tab open.
 (() => {
   const params = new URLSearchParams(location.hash.slice(1));
-  const code = (params.get('vd-code') || '').trim();
-  const pin = (params.get('vd-pin') || '').trim();
+  // If itison's search loads a new page, carry on with the same voucher for up to 2 minutes.
+  const MEMO = 'vdHelper';
+  let memo = null;
+  try { memo = JSON.parse(sessionStorage.getItem(MEMO) || 'null'); } catch (e) {}
+  const fromLink = params.has('vd-code');
+  const code = ((fromLink ? params.get('vd-code') : memo && memo.until > Date.now() && memo.code) || '').trim();
+  const pin = ((fromLink ? params.get('vd-pin') : memo && memo.pin) || '').trim();
   if (!/^[A-Za-z0-9-]{3,40}$/.test(code)) return;
-  // Take the code and PIN out of the address bar so a reload doesn't start again.
-  history.replaceState(history.state, '', location.pathname + location.search);
+  const remember = on => { try { on ? sessionStorage.setItem(MEMO, JSON.stringify({ code, pin, until: Date.now() + 120000 })) : sessionStorage.removeItem(MEMO); } catch (e) {} };
+  remember(true);
+  // Take the code and PIN out of the address bar.
+  if (fromLink) history.replaceState(history.state, '', location.pathname + location.search);
 
   const squash = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   const visible = el => el && el.offsetParent !== null && !el.disabled;
@@ -53,9 +60,10 @@
 
   const tell = result => chrome.runtime.sendMessage({ type: 'vd-result', result: { code, ...result } }).catch(() => {});
 
-  let step = 'search', tries = 0, searchedAt = 0, pressedEnter = false, firstStatus = null;
+  let step = 'search', tries = 0, searchedAt = 0, nudges = 0, firstStatus = null;
+  const stop = () => { clearInterval(timer); remember(false); };
   const timer = setInterval(() => {
-    if (++tries > 4 * 60 * 15) { clearInterval(timer); return; }   // give up after 15 minutes
+    if (++tries > 4 * 60 * 15) { stop(); return; }   // give up after 15 minutes
     const v = readVoucher();
 
     if (step === 'search') {
@@ -63,11 +71,24 @@
       else {
         const box = textInputs().find(i => /1234|voucher|code/i.test([i.placeholder, i.name, i.id, i.getAttribute('aria-label')].join(' ')));
         if (!box) return;                                      // page still loading
-        if (!searchedAt) { typeInto(box, code); box.focus(); searchedAt = Date.now(); say('code filled in'); return; }
-        if (!pressedEnter && Date.now() - searchedAt > 1200) { // no result yet, so press Enter for you
-          pressedEnter = true;
+        if (!searchedAt) {
+          if (squash(box.value) !== squash(code)) typeInto(box, code);
+          box.focus(); searchedAt = Date.now(); say('code filled in, searching…'); return;
+        }
+        // No result yet: try the different ways a search box can be set off, one at a time.
+        const wait = Date.now() - searchedAt;
+        if (nudges === 0 && wait > 1000) {
+          nudges++;
           for (const t of ['keydown', 'keypress', 'keyup'])
-            box.dispatchEvent(new KeyboardEvent(t, { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+            box.dispatchEvent(new KeyboardEvent(t, { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+        } else if (nudges === 1 && wait > 2200) {
+          nudges++;
+          const form = box.form || box.closest('form');
+          const go = form && [...form.querySelectorAll('button, input[type=submit]')].find(b => b.type === 'submit' && !b.disabled);
+          if (go) go.click(); else if (form) form.requestSubmit();
+        } else if (nudges === 2 && wait > 3500) {
+          nudges++;
+          say('code filled in. Press Enter to search.');
         }
         return;
       }
@@ -78,7 +99,7 @@
       if (v.status === 'redeemed') {
         say('itison says this voucher was already used. Check with the customer.');
         tell({ status: 'already', deal: v.deal, face: v.face, usedAt: v.usedAt });
-        clearInterval(timer); return;
+        stop(); return;
       }
       tell({ status: 'valid', deal: v.deal, face: v.face });
       step = 'open';
@@ -103,7 +124,7 @@
 
     if (step === 'wait') {
       if (v && v.status === 'redeemed' && firstStatus === 'valid') {
-        clearInterval(timer);
+        stop();
         say('redeemed. Logging it in Voucher Desk…', true);
         tell({ status: 'redeemed', deal: v.deal, face: v.face });
         setTimeout(() => chrome.runtime.sendMessage({ type: 'vd-close' }).catch(() => {}), 1500);
