@@ -235,6 +235,7 @@ dialog.edit .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:2
 .hc-row:hover td{background:var(--surface-2)}
 .hc-row .chev{display:inline-block;transition:transform .15s;color:var(--ink-3)}
 .hc-row.open .chev{transform:rotate(90deg)}
+.hc-total td{font-weight:600;background:var(--surface-2);white-space:normal}
 .hc-detail > td{padding:0 !important;background:var(--surface-2);white-space:normal}
 .hc-row td.deals{white-space:normal}
 .hc-detail .result{background:var(--surface)}
@@ -246,6 +247,9 @@ dialog.edit .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:2
 .fix-row .select{height:34px;font-size:13px}
 .fix-all{display:flex;justify-content:flex-end;margin-top:8px}
 .code-chip{font:600 12px var(--mono);letter-spacing:.4px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;color:var(--ink)}
+a.code-chip{text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+a.code-chip:hover{border-color:var(--accent,#2b59ff);color:var(--accent,#2b59ff)}
+a.code-chip .ic{width:12px;height:12px}
 
 /* ---------- history ---------- */
 .toolbar{display:grid;grid-template-columns:160px 160px minmax(0,1fr) auto auto;gap:12px;align-items:end;padding:16px 20px;border-bottom:1px solid var(--line)}
@@ -877,9 +881,19 @@ function render(){
 }
 
 /* ---------- end of shift check ---------- */
+function itisonLookup(code){
+  const base = (state.settings.hubUrl || '').split('#')[0];
+  return base ? base + (base.includes('?') ? '&' : '?') + 'redeem-code=' + encodeURIComponent(code) : '';
+}
+function chipHTML(v){
+  if (typeof v === 'string') return `<span class="code-chip">${esc(v)}</span>`;
+  const text = v.text != null ? v.text : `${v.code} · T${v.table||'?'} · ${money(v.value)}`;
+  const link = v.link && itisonLookup(v.code);
+  return link ? `<a class="code-chip" href="${esc(link)}" target="_blank" rel="noopener" title="Look up ${esc(v.code)} on itison">${esc(text)}${icon('external')}</a>` : `<span class="code-chip">${esc(text)}</span>`;
+}
 function resultHTML(kind, title, text, codes){
   const ic = kind === 'ok' ? 'check' : kind === 'bad' ? 'x' : 'alert';
-  return `<div class="result ${kind}"><div class="result-ic">${icon(ic)}</div><div><b>${title}</b>${text ? `<p>${text}</p>` : ''}${codes && codes.length ? `<div class="codes">${codes.map(v => `<span class="code-chip">${typeof v === 'string' ? esc(v) : `${esc(v.code)} · T${esc(v.table||'?')} · ${money(v.value)}`}</span>`).join('')}</div>` : ''}</div></div>`;
+  return `<div class="result ${kind}"><div class="result-ic">${icon(ic)}</div><div><b>${title}</b>${text ? `<p>${text}</p>` : ''}${codes && codes.length ? `<div class="codes">${codes.map(chipHTML).join('')}</div>` : ''}</div></div>`;
 }
 /* itison's per-deal lists (the Hub's guestlists.csv). Only the code, deal, state and redeemed time are kept,
    and only in memory: the files also hold customers' names and PINs. */
@@ -968,10 +982,10 @@ function compareNight(n, itison, itisonErr, scope){
   const notRedeemed = [], otherNight = [], unknown = [];
   for (const v of t) {
     const r = byCode.get(norm(v.code));
-    if (!r) unknown.push(v);
+    if (!r) unknown.push({ ...v, link: true });
     else if (redeemedOn(r, n)) continue;
-    else if (r.state.toLowerCase() === 'redeemed') otherNight.push(`${v.code} · redeemed ${when(r)}`);
-    else notRedeemed.push(`${v.code} · T${v.table||'?'} · itison says ${r.state}`);
+    else if (r.state.toLowerCase() === 'redeemed') otherNight.push({ code: v.code, text: `${v.code} · redeemed ${when(r)}`, link: true });
+    else notRedeemed.push({ code: v.code, text: `${v.code} · T${v.table||'?'} · itison says ${r.state}`, link: true });
   }
   const loggedOn = new Map(live().map(v => [norm(v.code), v.night]));
   const onItison = itison.rows.filter(r => redeemedOn(r, n)).sort((a,b) => a.at - b.at);
@@ -982,14 +996,20 @@ function compareNight(n, itison, itisonErr, scope){
   const w = nightWord(n);
   if (!missing) out.push(resultHTML('ok','itison matches the log', t.length ? `All ${t.length} logged ${plural(t.length,'voucher')} were redeemed on itison ${w}, and nothing else was.` : `Nothing logged and nothing redeemed on itison ${w}.`));
   else if (fine) out.push(resultHTML('ok',`${fine} ${plural(fine,'voucher')} ${fine===1?'matches':'match'} itison`,''));
-  if (notRedeemed.length) out.push(resultHTML('bad',`${notRedeemed.length} logged but not redeemed on itison`,`itison won't pay for ${notRedeemed.length===1?'it':'them'} until ${notRedeemed.length===1?"it's":"they're"} redeemed on the Hub:`, notRedeemed));
+  if (notRedeemed.length) out.push(resultHTML('bad',`${notRedeemed.length} logged but not redeemed on itison`,`itison won't pay for ${notRedeemed.length===1?'it':'them'} until ${notRedeemed.length===1?"it's":"they're"} redeemed on the Hub. Click a code to open it on itison:`, notRedeemed));
   if (extra.length) out.push(unloggedHTML(extra, scope, n));
-  if (otherNight.length) out.push(resultHTML('warn',`${otherNight.length} redeemed on itison on a different night`,`Logged ${w}, but itison has them redeemed at another time. Check they weren't used twice:`, otherNight));
+  if (otherNight.length) out.push(resultHTML('warn',`${otherNight.length} redeemed on itison on a different night`,`Logged ${w}, but itison has them redeemed at another time. Check they weren't used twice (click a code to open it on itison):`, otherNight));
   if (elsewhere.length) out.push(resultHTML('warn',`${elsewhere.length} logged on a different night`,`Redeemed on itison ${w}, but logged on another night:`, elsewhere.map(r => `${r.code} · logged ${niceNight(loggedOn.get(norm(r.code)))}`)));
   if (unknown.length) out.push(itisonErr
     ? resultHTML('warn',`${unknown.length} not checked`,"Probably in the itison list that couldn't be fetched. Check them on the Hub:", unknown)
-    : resultHTML('warn',`${unknown.length} not in itison's lists`,"Check the code is right. If it's from a deal that isn't in Settings → itison download links, add that deal's link:", unknown));
+    : resultHTML('warn',`${unknown.length} not in itison's lists`,"Logged, but not in any of the itison lists Voucher Desk checks. Either the code was typed wrong, or it's from an itison deal whose download link isn't in Settings (look under Deals &amp; events on itison, including older deals). Click a code to open it on itison:", unknown));
   return { out, missing, t, onItison };
+}
+// What itison's redemptions are worth at your till amounts (deal matches in Settings). Unmatched deals can't be priced.
+function itisonRevenue(rows){
+  let total = 0, unpriced = 0;
+  for (const r of rows) { const d = state.settings.deals.find(x => x.name === state.settings.itisonDeals[r.title]); if (d) total += d.value; else unpriced++; }
+  return { total, unpriced };
 }
 function itisonMissingHTML(itison, itisonErr){
   if (itisonErr) return resultHTML('warn', itison ? 'Part of itison not checked' : 'itison not checked', esc(itisonErr) + ' Make sure itison is signed in on this laptop, or download the lists from the Hub and choose "Use downloaded files instead" on End of shift.');
@@ -1104,14 +1124,17 @@ function renderHistoryCheck(){
   }
   if (!hCheck.open) hCheck.open = new Set(nights.filter(x => x.missing).map(x => x.n));   // open the nights that need a look
   const all = nights.flatMap(x => x.onItison), logged = nights.reduce((s,x) => s + x.t.length, 0), problems = nights.filter(x => x.missing).length;
+  const loggedRev = nights.reduce((s,x) => s + x.t.reduce((a,v) => a + v.value, 0), 0), allRev = itisonRevenue(all);
+  const rev = rows => { const r = itisonRevenue(rows); return money(r.total) + (r.unpriced ? ` <span class="muted-text" title="${r.unpriced} not matched to a deal">+${r.unpriced}?</span>` : ''); };
   const pill = (ok, okText, badText) => ok ? `<span class="pill ok">${okText}</span>` : `<span class="pill bad">${badText}</span>`;
   $('hCheckOut').innerHTML = gap + (nights.length ? `<div class="table-wrap"><table>
-    <thead><tr><th>Night</th><th class="r">Redeemed on itison</th><th>Deals</th><th class="r">Logged</th><th>Result</th><th></th></tr></thead>
-    <tbody>${nights.map(x => `<tr class="hc-row ${hCheck.open.has(x.n) ? 'open' : ''}" data-hc="${x.n}"><td>${niceNight(x.n)}</td><td class="r num">${x.onItison.length}</td><td class="deals">${byDeal(x.onItison) || '–'}</td><td class="r num">${x.t.length}</td>
+    <thead><tr><th>Night</th><th class="r">Redeemed on itison</th><th>Deals</th><th class="r">itison revenue</th><th class="r">Logged</th><th class="r">Logged revenue</th><th>Result</th><th></th></tr></thead>
+    <tbody>${nights.map(x => `<tr class="hc-row ${hCheck.open.has(x.n) ? 'open' : ''}" data-hc="${x.n}"><td>${niceNight(x.n)}</td><td class="r num">${x.onItison.length}</td><td class="deals">${byDeal(x.onItison) || '–'}</td><td class="r num">${rev(x.onItison)}</td><td class="r num">${x.t.length}</td><td class="r num">${money(x.t.reduce((s,v) => s + v.value, 0))}</td>
         <td>${pill(!x.missing, 'Matches', `${x.missing} to check`)}</td><td class="r"><span class="chev">›</span></td></tr>
-      ${hCheck.open.has(x.n) ? `<tr class="hc-detail"><td colspan="6">${x.out.join('')}</td></tr>` : ''}`).join('')}</tbody>
+      ${hCheck.open.has(x.n) ? `<tr class="hc-detail"><td colspan="8">${x.out.join('')}</td></tr>` : ''}`).join('')}</tbody>
+      <tfoot><tr class="hc-total"><td>Total</td><td class="r num">${all.length}</td><td class="deals">${byDeal(all) || '–'}</td><td class="r num">${rev(all)}</td><td class="r num">${logged}</td><td class="r num">${money(loggedRev)}</td><td colspan="2">${problems ? `${problems} ${plural(problems,'night')} to check` : 'Every night matches'}</td></tr></tfoot>
     </table></div>
-    <div class="table-foot"><span>${all.length} redeemed on itison over ${nights.length} ${plural(nights.length,'night')}${all.length ? ': ' + byDeal(all) : ''}. ${logged} logged. ${problems ? `${problems} ${plural(problems,'night')} to check.` : 'Every night matches.'}</span></div>`
+    ${allRev.unpriced ? `<div class="table-foot"><span>${allRev.unpriced} ${plural(allRev.unpriced,'voucher')} from itison ${allRev.unpriced===1?"isn't":"aren't"} in the itison revenue, because ${allRev.unpriced===1?'its deal isn\'t':'their deals aren\'t'} matched to one of yours. Match them in Settings → itison deal matches.</span></div>` : ''}`
     : `<div class="panel-body"><p class="help">Nothing redeemed on itison or logged between ${niceNight(from)} and ${niceNight(to)}.</p></div>`);
 }
 $('hCheckOut').addEventListener('click', e => {
