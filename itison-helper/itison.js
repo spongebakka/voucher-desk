@@ -70,6 +70,12 @@
 
   let step = 'search', tries = 0, searchedAt = 0, nudges = saved.nudged ? 1 : 0, firstStatus = saved.valid ? 'valid' : null;
   const stop = () => { clearInterval(timer); remember(false); };
+  // Tell Voucher Desk how it went, then close this tab so you land back on Voucher Desk.
+  const finishWith = (result, text, good) => {
+    stop(); say(text, good); tell(result);
+    setTimeout(() => chrome.runtime.sendMessage({ type: 'vd-close' }).catch(() => {}), 800);
+  };
+  const pageSays = re => re.test(document.body.innerText || '');
   const timer = setInterval(() => {
     if (++tries > 4 * 60 * 15) { stop(); return; }   // give up after 15 minutes
     const v = readVoucher();
@@ -83,9 +89,17 @@
     }
     if (step === 'search') {
       if (v) { step = 'check'; }
+      else if (pageSays(/Please enter the full voucher code/i)) {
+        finishWith({ status: 'badcode' }, "itison says that isn't a full voucher code."); return;
+      }
       else {
         const box = textInputs().find(i => /1234|voucher|code/i.test([i.placeholder, i.name, i.id, i.getAttribute('aria-label')].join(' ')));
         if (!box) return;                                      // page still loading
+        // itison searched for this code (it's in the address) but shows nothing: it doesn't know the code.
+        const searched = squash(new URLSearchParams(location.search).get('redeem-code')) === squash(code);
+        if (searched && searchedAt && Date.now() - searchedAt > 2000) {
+          finishWith({ status: 'notfound' }, "itison didn't find this code."); return;
+        }
         if (!searchedAt) {
           if (squash(box.value) !== squash(code)) typeInto(box, code);
           box.focus(); searchedAt = Date.now(); say('code filled in, searching…'); return;
@@ -108,14 +122,10 @@
     if (step === 'check') {
       if (v.status === 'redeemed' && firstStatus === 'valid') step = 'wait';   // itison reloaded the page after you pressed Redeem
       else if (v.status === 'other') {
-        say(`itison says this voucher is "${v.label}". Check with the customer.`);
-        tell({ status: 'other', deal: v.deal, face: v.face, label: v.label });
-        stop(); return;
+        finishWith({ status: 'other', deal: v.deal, face: v.face, label: v.label }, `itison says this voucher is "${v.label}".`); return;
       }
       else if (v.status === 'redeemed') {
-        say('itison says this voucher was already used. Check with the customer.');
-        tell({ status: 'already', deal: v.deal, face: v.face, usedAt: v.usedAt });
-        stop(); return;
+        finishWith({ status: 'already', deal: v.deal, face: v.face, usedAt: v.usedAt }, 'itison says this voucher was already used.'); return;
       }
       else {
         firstStatus = 'valid'; remember(true, { valid: true });
@@ -149,10 +159,9 @@
 
     if (step === 'wait') {
       if (v && v.status === 'redeemed' && firstStatus === 'valid') {
-        stop();
-        say('redeemed. Logging it in Voucher Desk…', true);
-        tell({ status: 'redeemed', deal: v.deal, face: v.face });
-        setTimeout(() => chrome.runtime.sendMessage({ type: 'vd-close' }).catch(() => {}), 1500);
+        finishWith({ status: 'redeemed', deal: v.deal, face: v.face }, 'redeemed. Logging it in Voucher Desk…', true);
+      } else if (pageSays(/Pin is incorrect/i)) {
+        finishWith({ status: 'badpin', deal: v && v.deal, face: v && v.face }, 'itison says the PIN is wrong.');
       } else if (step === 'wait' && !pinInput() && v && v.status === 'valid') {
         step = 'open';   // the PIN box was cancelled: wait for you to press "Redeem voucher" again
       }
