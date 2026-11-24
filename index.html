@@ -235,6 +235,8 @@ dialog.edit .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:2
 .hc-row:hover td{background:var(--surface-2)}
 .hc-row .chev{display:inline-block;transition:transform .15s;color:var(--ink-3)}
 .hc-row.open .chev{transform:rotate(90deg)}
+.sister-line{font-size:13px;color:var(--ink-2);margin-top:2px}
+.hc-total .sister-line{font-weight:500}
 .hc-total td{font-weight:600;background:var(--surface-2);white-space:normal}
 .hc-detail > td{padding:0 !important;background:var(--surface-2);white-space:normal}
 .hc-row td.deals{white-space:normal}
@@ -542,6 +544,11 @@ td.c,th.c{text-align:center}
               <p class="help" id="exportLinksNote"></p>
             </div>
             <div class="f" style="margin-top:16px">
+              <label for="sisterName">Sister restaurant's name <span style="color:var(--ink-3);font-weight:400">optional</span></label>
+              <input class="input" id="sisterName" placeholder="e.g. the other restaurant" spellcheck="false">
+              <p class="help">Shown in the itison checks, e.g. "2 × £100 Voucher from …".</p>
+            </div>
+            <div class="f" style="margin-top:16px">
               <label for="sisterLinks">Sister restaurant's download links <span style="color:var(--ink-3);font-weight:400">optional</span></label>
               <textarea class="textarea" id="sisterLinks" rows="2" style="min-height:64px" placeholder="https://www.itison.com/hub/company/…/products/…/guestlists.csv" spellcheck="false"></textarea>
               <p class="help">For deals sold by the sister restaurant whose vouchers can also be used here. In the itison Hub, switch to their business and copy each deal's download link the same way. Only the vouchers redeemed with this restaurant's itison login are counted.</p>
@@ -594,9 +601,10 @@ const STEPS = [['itison','itison','Redeemed on itison'],['till','Till','Put thro
 let storageOK = true;
 let state = load() || { vouchers: [], checks: [], settings: { deals: [{name:'Example deal (edit in Settings)', value:30}], staff: [], hubUrl: '' }, lastBackup: null };
 if (!state.checks) state.checks = [];
-if (!state.settings.itisonDeals) state.settings.itisonDeals = {};
-if (!state.settings.itisonExports) state.settings.itisonExports = [];
-if (!state.settings.itisonSisterExports) state.settings.itisonSisterExports = [];   // the sister restaurant's deal lists (their vouchers can be used here)   // each deal's itison download link (guestlists.csv)   // itison's deal text → the deal name picked for it last time
+if (!state.settings.itisonDeals) state.settings.itisonDeals = {};                   // itison's deal text → the deal name picked for it
+if (!state.settings.itisonExports) state.settings.itisonExports = [];               // each deal's itison download link (guestlists.csv)
+if (!state.settings.itisonSisterExports) state.settings.itisonSisterExports = [];   // the sister restaurant's deal lists (their vouchers can be used here)
+if (state.settings.sisterName == null) state.settings.sisterName = '';              // the sister restaurant's name, for labels
 
 function load(){ try { const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; } catch(e){ storageOK = false; return null; } }
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){ storageOK = false; } $('storageBanner').hidden = storageOK; }
@@ -910,6 +918,7 @@ const sisterLinks = () => state.settings.itisonSisterExports.filter(u => EXPORT_
 const allLinks = () => [...exportLinks(), ...sisterLinks()];
 const productOf = s => (String(s).match(/products\/(\d+)/) || String(s).match(/^(\d+)/) || [])[1] || '';
 const sisterProducts = () => new Set(sisterLinks().map(productOf));
+const sisterName = () => state.settings.sisterName.trim() || 'the sister restaurant';
 const helperOn = () => !!document.documentElement.dataset.vdHelper;
 // Fetching itison's lists needs add-on 2.8 or later, and a refresh of this page after updating it.
 const helperCanFetch = () => { const [a, b] = String(document.documentElement.dataset.vdHelper || '0').split('.').map(Number); return a > 2 || (a === 2 && b >= 8); };
@@ -960,7 +969,7 @@ function fetchLists(urls){
 function renderItisonSource(){
   const n = allLinks().length;
   $('itisonSource').innerHTML = itisonFiles
-    ? `Using ${itisonFiles.length} downloaded ${plural(itisonFiles.length,'file')}${itisonFiles.some(f => f.sister) ? ` (${itisonFiles.filter(f => f.sister).length} from the sister restaurant)` : ''}. <a href="#" id="useFetch">Fetch from itison instead</a>`
+    ? `Using ${itisonFiles.length} downloaded ${plural(itisonFiles.length,'file')}${itisonFiles.some(f => f.sister) ? ` (${itisonFiles.filter(f => f.sister).length} from ${esc(sisterName())})` : ''}. <a href="#" id="useFetch">Fetch from itison instead</a>`
     : !helperOn() ? 'Install the itison helper add-on (see Settings) to fetch these from itison automatically, or use downloaded files.'
     : !helperCanFetch() ? `The itison helper add-on on this laptop is version ${esc(document.documentElement.dataset.vdHelper)}. Update it to 2.8 or later, then refresh this page, to fetch from itison. Or use downloaded files.`
     : !n ? 'Add the itison download links in Settings to fetch these automatically, or use downloaded files.'
@@ -1005,7 +1014,7 @@ function compareNight(n, itison, itisonErr, scope){
     const r = byCode.get(norm(v.code));
     if (!r) unknown.push({ ...v, link: true });
     else if (redeemedOn(r, n)) continue;
-    else if (r.away) atSister.push({ code: v.code, text: `${v.code} · used at the sister restaurant ${when(r)}`, link: true });
+    else if (r.away) atSister.push({ code: v.code, text: `${v.code} · used at ${sisterName()} ${when(r)}`, link: true });
     else if (r.state.toLowerCase() === 'redeemed') otherNight.push({ code: v.code, text: `${v.code} · redeemed ${when(r)}`, link: true });
     else notRedeemed.push({ code: v.code, text: `${v.code} · T${v.table||'?'} · itison says ${r.state}`, link: true });
   }
@@ -1021,7 +1030,7 @@ function compareNight(n, itison, itisonErr, scope){
   if (notRedeemed.length) out.push(resultHTML('bad',`${notRedeemed.length} logged but not redeemed on itison`,`itison won't pay for ${notRedeemed.length===1?'it':'them'} until ${notRedeemed.length===1?"it's":"they're"} redeemed on the Hub. Click a code to open it on itison:`, notRedeemed));
   if (extra.length) out.push(unloggedHTML(extra, scope, n));
   if (otherNight.length) out.push(resultHTML('warn',`${otherNight.length} redeemed on itison on a different night`,`Logged ${w}, but itison has them redeemed at another time. Check they weren't used twice (click a code to open it on itison):`, otherNight));
-  if (atSister.length) out.push(resultHTML('bad',`${atSister.length} used at the sister restaurant`,`Logged ${w}, but itison says the sister restaurant redeemed ${atSister.length===1?'it':'them'}. Check ${atSister.length===1?"it wasn't":"they weren't"} used twice:`, atSister));
+  if (atSister.length) out.push(resultHTML('bad',`${atSister.length} used at ${esc(sisterName())}`,`Logged ${w}, but itison says ${esc(sisterName())} redeemed ${atSister.length===1?'it':'them'}. Check ${atSister.length===1?"it wasn't":"they weren't"} used twice:`, atSister));
   if (itison.sisterUnsure) out.push(resultHTML('warn',"Sister restaurant's vouchers not counted","Voucher Desk couldn't tell which itison login is this restaurant's, because none of this restaurant's own lists have redemptions yet."));
   if (elsewhere.length) out.push(resultHTML('warn',`${elsewhere.length} logged on a different night`,`Redeemed on itison ${w}, but logged on another night:`, elsewhere.map(r => `${r.code} · logged ${niceNight(loggedOn.get(norm(r.code)))}`)));
   if (unknown.length) out.push(itisonErr
@@ -1139,7 +1148,11 @@ function renderHistoryCheck(){
   $('hCheckWhen').textContent = `${niceNight(from)} to ${niceNight(to)} · fetched ${timeOf(hCheck.at)}`;
   const gap = itisonMissingHTML(itison, itisonErr);
   if (!itison || !itison.rows.length) { $('hCheckOut').innerHTML = gap; return; }
-  const dealOf = r => (state.settings.itisonDeals[r.title] || r.title || 'Unknown deal') + (r.sister ? ' (sister restaurant)' : '');
+  const dealOf = r => state.settings.itisonDeals[r.title] || r.title || 'Unknown deal';
+  const dealsCell = rows => {
+    const own = rows.filter(r => !r.sister), sis = rows.filter(r => r.sister);
+    return (byDeal(own) || (sis.length ? '' : '–')) + (sis.length ? `<div class="sister-line">${byDeal(sis)} from ${esc(sisterName())} · ${rev(sis)}</div>` : '');
+  };
   const byDeal = rows => { const c = {}; rows.forEach(r => c[dealOf(r)] = (c[dealOf(r)] || 0) + 1); return Object.entries(c).sort((a,b) => b[1] - a[1]).map(([k,v]) => `${v} × ${esc(k)}`).join(', '); };
   const nights = [];
   for (let n = to; n >= from; n = shiftNight(n, -1)) {
@@ -1153,10 +1166,10 @@ function renderHistoryCheck(){
   const pill = (ok, okText, badText) => ok ? `<span class="pill ok">${okText}</span>` : `<span class="pill bad">${badText}</span>`;
   $('hCheckOut').innerHTML = gap + (nights.length ? `<div class="table-wrap"><table>
     <thead><tr><th>Night</th><th class="r">Redeemed on itison</th><th>Deals</th><th class="r">itison revenue</th><th class="r">Logged</th><th class="r">Logged revenue</th><th>Result</th><th></th></tr></thead>
-    <tbody>${nights.map(x => `<tr class="hc-row ${hCheck.open.has(x.n) ? 'open' : ''}" data-hc="${x.n}"><td>${niceNight(x.n)}</td><td class="r num">${x.onItison.length}</td><td class="deals">${byDeal(x.onItison) || '–'}</td><td class="r num">${rev(x.onItison)}</td><td class="r num">${x.t.length}</td><td class="r num">${money(x.t.reduce((s,v) => s + v.value, 0))}</td>
+    <tbody>${nights.map(x => `<tr class="hc-row ${hCheck.open.has(x.n) ? 'open' : ''}" data-hc="${x.n}"><td>${niceNight(x.n)}</td><td class="r num">${x.onItison.length}</td><td class="deals">${dealsCell(x.onItison)}</td><td class="r num">${rev(x.onItison)}</td><td class="r num">${x.t.length}</td><td class="r num">${money(x.t.reduce((s,v) => s + v.value, 0))}</td>
         <td>${pill(!x.missing, 'Matches', `${x.missing} to check`)}</td><td class="r"><span class="chev">›</span></td></tr>
       ${hCheck.open.has(x.n) ? `<tr class="hc-detail"><td colspan="8">${x.out.join('')}</td></tr>` : ''}`).join('')}</tbody>
-      <tfoot><tr class="hc-total"><td>Total</td><td class="r num">${all.length}</td><td class="deals">${byDeal(all) || '–'}</td><td class="r num">${rev(all)}</td><td class="r num">${logged}</td><td class="r num">${money(loggedRev)}</td><td colspan="2">${problems ? `${problems} ${plural(problems,'night')} to check` : 'Every night matches'}</td></tr></tfoot>
+      <tfoot><tr class="hc-total"><td>Total</td><td class="r num">${all.length}</td><td class="deals">${dealsCell(all)}</td><td class="r num">${rev(all)}</td><td class="r num">${logged}</td><td class="r num">${money(loggedRev)}</td><td colspan="2">${problems ? `${problems} ${plural(problems,'night')} to check` : 'Every night matches'}</td></tr></tfoot>
     </table></div>
     ${allRev.unpriced ? unmatchedHTML(all) : ''}`
     : `<div class="panel-body"><p class="help">Nothing redeemed on itison or logged between ${niceNight(from)} and ${niceNight(to)}.</p></div>`);
@@ -1239,6 +1252,7 @@ function renderSettings(){
   $('staffChips').innerHTML = state.settings.staff.map((s,i) => `<span class="chip">${esc(s)}<button type="button" data-staff-del="${i}" aria-label="Remove ${esc(s)}">${icon('x')}</button></span>`).join('') || '<span class="help">No names yet.</span>';
   $('hubUrl').value = state.settings.hubUrl || '';
   if (document.activeElement !== $('exportLinks')) $('exportLinks').value = state.settings.itisonExports.join('\n');
+  if (document.activeElement !== $('sisterName')) $('sisterName').value = state.settings.sisterName;
   if (document.activeElement !== $('sisterLinks')) $('sisterLinks').value = state.settings.itisonSisterExports.join('\n');
   renderLinksNote();
   $('backupInfo').textContent = `${live().length} ${plural(live().length,'voucher')} saved on this device. ` + (state.lastBackup ? `Last backup ${new Date(state.lastBackup).toLocaleDateString('en-GB')}.` : 'Never backed up.') + ' Download a backup weekly in case the browser gets cleared.';
@@ -1279,6 +1293,7 @@ $('tab-settings').addEventListener('input', e => {
   else if (t.dataset.dealVal) { state.settings.deals[t.dataset.dealVal].value = parseFloat(t.value) || 0; renderMatches(); }
   else if (t.id === 'hubUrl') state.settings.hubUrl = t.value.trim();
   else if (t.id === 'exportLinks') { state.settings.itisonExports = t.value.split(/\s+/).map(x => x.trim()).filter(Boolean); renderLinksNote(); }
+  else if (t.id === 'sisterName') state.settings.sisterName = t.value;
   else if (t.id === 'sisterLinks') { state.settings.itisonSisterExports = t.value.split(/\s+/).map(x => x.trim()).filter(Boolean); renderLinksNote(); }
   else return;
   save(); fillSelects();
