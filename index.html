@@ -341,7 +341,7 @@ td.c,th.c{text-align:center}
           </div>
           <div class="actions">
             <button type="submit" class="btn primary block lg"><svg class="ic"><use href="#i-external"/></svg>Redeem on itison</button>
-            <div class="sub-actions"><span class="help">Copies the PIN and opens itison with the code filled in. Nothing is logged until itison accepts it.</span><button type="button" class="btn sm" id="addNote"><svg class="ic"><use href="#i-plus"/></svg>Note</button></div>
+            <div class="sub-actions"><span class="help">Opens itison and fills in the code and PIN (with the helper add-on). Nothing is logged until itison accepts it.</span><button type="button" class="btn sm" id="addNote"><svg class="ic"><use href="#i-plus"/></svg>Note</button></div>
           </div>
         </div>
 
@@ -352,6 +352,7 @@ td.c,th.c{text-align:center}
             <div class="redeem-row"><span class="lbl">PIN</span><span class="big" id="rPin"></span><button type="button" class="btn sm" data-copy="pin"><svg class="ic"><use href="#i-copy"/></svg>Copy</button></div>
           </div>
           <p class="help" id="rSummary" style="margin:12px 0 0"></p>
+          <div id="itisonStatus" style="margin-top:12px" hidden></div>
           <p class="stage-lead" style="margin:18px 0 10px">Once itison accepts it, pick the deal it shows.</p>
           <div class="fields compact">
             <div class="f s2">
@@ -547,6 +548,7 @@ const STEPS = [['itison','itison','Redeemed on itison'],['till','Till','Put thro
 let storageOK = true;
 let state = load() || { vouchers: [], checks: [], settings: { deals: [{name:'Example deal (edit in Settings)', value:30}], staff: [], hubUrl: '' }, lastBackup: null };
 if (!state.checks) state.checks = [];
+if (!state.settings.itisonDeals) state.settings.itisonDeals = {};   // itison's deal text → the deal name picked for it last time
 
 function load(){ try { const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; } catch(e){ storageOK = false; return null; } }
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){ storageOK = false; } $('storageBanner').hidden = storageOK; }
@@ -636,7 +638,7 @@ function openItison(){
   const url = state.settings.hubUrl;
   if (!url) { toast('Add the itison link in Settings so this button can open it.', 'warn'); return; }
   // The code rides along after the # so the itison helper add-on can fill it in. It never reaches itison's server.
-  const code = pending ? '#vd-code=' + encodeURIComponent(pending.code) : '';
+  const code = pending ? `#vd-code=${encodeURIComponent(pending.code)}&vd-pin=${encodeURIComponent(pending.pin)}` : '';
   window.open(url.split('#')[0] + code, '_blank', 'noopener');
 }
 function setStage(b){
@@ -653,6 +655,7 @@ $('addForm').addEventListener('submit', async e => {
   pending = { code, pin, table: $('table').value.trim(), staff: $('staff').value, note: $('note').value.trim() };
   $('rCode').textContent = code; $('rPin').textContent = pin;
   $('rSummary').textContent = `Table ${pending.table || '–'} · ${pending.staff || 'No name'}`;
+  showItison(null);
   setStage(true);
   copyText(pin, 'PIN');   // start the copy while this tab still has focus (the helper add-on fills in the code)
   openItison();
@@ -669,6 +672,7 @@ function finish(accepted){
   if (accepted && dealSel === '') { toast('Pick the deal itison shows first.', 'bad'); $('deal').focus(); return; }
   if (accepted && !(value >= 0)) { toast('Enter the till amount.', 'bad'); $('value').focus(); return; }
   const deal = !accepted ? '' : dealSel === 'custom' ? 'Other' : (state.settings.deals[dealSel]?.name || '');
+  if (accepted && pending.itisonDeal && dealSel !== 'custom' && deal) state.settings.itisonDeals[pending.itisonDeal] = deal;
   const now = Date.now();
   const v = {
     id: uid(), code: pending.code, at: now, night: nightOf(now),
@@ -687,6 +691,38 @@ function finish(accepted){
   else toast(`Marked as rejected. Let the customer know it didn't go through.`, 'warn');
 }
 $('redeemOk').addEventListener('click', () => finish(true));
+
+/* ---------- messages from the itison helper add-on ---------- */
+function showItison(kind, html){
+  const b = $('itisonStatus');
+  b.hidden = !kind;
+  b.innerHTML = !kind ? '' : `<div class="field-alert" style="${kind==='ok' ? 'background:var(--ok-soft);color:var(--ok)' : kind==='warn' ? 'background:var(--warn-soft);color:var(--warn)' : ''}">${icon(kind==='ok' ? 'check' : 'alert')}<span>${html}</span></div>`;
+}
+function dealFor(itisonDeal, face){
+  const known = state.settings.deals.findIndex(d => d.name === state.settings.itisonDeals[itisonDeal]);
+  if (known >= 0) return { i: known, sure: true };
+  // First time we've seen this deal: guess from the £ amount in the deal names, but ask before logging.
+  const re = face ? new RegExp('(^|[^\\d.])' + face + '([^\\d]|$)') : null;
+  const hits = re ? state.settings.deals.map((d,i) => re.test(d.name) ? i : -1).filter(i => i >= 0) : [];
+  return { i: hits.length === 1 ? hits[0] : -1, sure: false };
+}
+window.addEventListener('message', e => {
+  const m = e.data;
+  if (e.source !== window || !m || m.from !== 'vd-helper' || !pending || norm(m.code) !== norm(pending.code)) return;
+  const dealText = esc(m.deal || 'the deal');
+  if (m.deal) pending.itisonDeal = m.deal;
+  const pick = dealFor(m.deal, m.face);
+  if (pick.i >= 0) { $('deal').value = String(pick.i); syncDeal(); }
+  if (m.status === 'already') {
+    showItison('bad', `itison says this code was already used${m.usedAt ? ` (${esc(m.usedAt)})` : ''}. If that was you just now, press Accepted. Otherwise check with the customer.`);
+  } else if (m.status === 'valid') {
+    showItison('ok', `itison says it's valid: <b>${dealText}</b>. Press Redeem on itison to finish.`);
+  } else if (m.status === 'redeemed') {
+    if (pick.sure) { finish(true); return; }
+    showItison('ok', `Redeemed on itison: <b>${dealText}</b>. Pick the deal it matches, then press Accepted. Voucher Desk will remember it next time.`);
+    $('deal').focus();
+  }
+});
 $('redeemBad').addEventListener('click', () => finish(false));
 
 /* ---------- list rows ---------- */
