@@ -231,6 +231,13 @@ dialog.edit .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:2
 .result b{display:block;font-weight:600;margin:4px 0 2px}
 .result p{margin:0;font-size:14px;color:var(--ink-2)}
 .result .codes{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.fix-list{margin-top:10px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.fix-row{display:grid;grid-template-columns:minmax(0,1fr) 220px auto;gap:10px;align-items:center;padding:8px 10px;border-top:1px solid var(--line);background:var(--surface)}
+.fix-row:first-child{border-top:0}
+.fix-row .fx{font-size:13px;color:var(--ink-2);overflow-wrap:anywhere}
+.fix-row .fx b{display:inline;font:600 13px var(--mono);color:var(--ink);margin:0 6px 0 0}
+.fix-row .select{height:34px;font-size:13px}
+.fix-all{display:flex;justify-content:flex-end;margin-top:8px}
 .code-chip{font:600 12px var(--mono);letter-spacing:.4px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;color:var(--ink)}
 
 /* ---------- history ---------- */
@@ -887,9 +894,9 @@ function readItison(texts){
   for (const text of texts) {
     const [head, ...body] = parseCSV(String(text).replace(/^\uFEFF/, ''));
     const col = name => (head || []).findIndex(h => h.trim().toLowerCase() === name);
-    const c = col('voucher code'), ti = col('title'), st = col('state'), at = col('redeemed on');
+    const c = col('voucher code'), ti = col('title'), st = col('state'), at = col('redeemed on'), pn = col('pin');
     if (c < 0 || st < 0) { unreadable++; continue; }
-    for (const r of body) if (r[c]) rows.push({ code: r[c].trim(), title: ti < 0 ? '' : r[ti], state: r[st].trim(), at: parseWhen(r[at]) });
+    for (const r of body) if (r[c]) rows.push({ code: r[c].trim(), title: ti < 0 ? '' : r[ti], state: r[st].trim(), at: parseWhen(r[at]), pin: pn < 0 ? '' : (r[pn] || '').replace(/\D/g, '').slice(0, 4) });
   }
   return { rows, unreadable };
 }
@@ -920,6 +927,44 @@ $('csvFiles').addEventListener('change', async e => {
   if (!got.rows.length) { itisonFiles = null; toast("Those don't look like itison's download files.", 'bad'); }
   else toast(`Got ${files.length} ${plural(files.length,'file')} from itison.`);
   renderItisonSource();
+});
+
+/* Vouchers itison redeemed tonight that aren't in the log: log them from here, one by one or all at once. */
+let unlogged = [];
+function unloggedHTML(rows){
+  unlogged = rows;
+  const opts = r => {
+    const face = parseFloat((String(r.title).match(/£\s?([\d,]+(?:\.\d\d)?)/) || [, ''])[1].replace(/,/g, '')) || null;
+    const pick = dealFor(r.title, face);
+    return (pick.i < 0 ? '<option value="">Pick the deal</option>' : '') + state.settings.deals.map((d,j) => `<option value="${j}" ${j===pick.i?'selected':''}>${esc(d.name)} · ${money(d.value)}</option>`).join('');
+  };
+  return `<div class="result bad"><div class="result-ic">${icon('x')}</div><div>
+    <b>${rows.length} redeemed on itison but not logged</b>
+    <p>itison redeemed ${rows.length===1?'it':'them'} tonight, but ${rows.length===1?"it's":"they're"} missing from Voucher Desk. Log ${rows.length===1?'it':'them'} so the log matches what itison will pay. The table is left blank: add it with the pencil if you know it.</p>
+    <div class="fix-list">${rows.map((r,i) => `<div class="fix-row"><span class="fx"><b>${esc(r.code)}</b>${timeOf(r.at)}${r.title ? ' · ' + esc(r.title) : ''}</span>
+      <select class="select" data-fix-deal="${i}" aria-label="Deal for ${esc(r.code)}">${opts(r)}</select>
+      <button type="button" class="btn sm" data-fix-log="${i}">Log it</button></div>`).join('')}</div>
+    ${rows.length > 1 ? '<div class="fix-all"><button type="button" class="btn sm primary" id="fixAll">Log all</button></div>' : ''}
+  </div></div>`;
+}
+function logFromItison(i){
+  const r = unlogged[i], sel = document.querySelector(`[data-fix-deal="${i}"]`), d = state.settings.deals[sel ? sel.value : ''];
+  if (!r || !d) { sel?.focus(); return false; }
+  if (live().some(v => norm(v.code) === norm(r.code))) return true;   // already logged
+  if (r.title) state.settings.itisonDeals[r.title] = d.name;           // remember the match, like after a redemption
+  state.vouchers.push({ id: uid(), code: r.code.toUpperCase(), at: r.at, night: nightOf(r.at), pin: r.pin || '', table: '', deal: d.name, value: d.value,
+    staff: $('closer').value, note: 'Logged from itison at end of shift', steps: { itison: r.at, till: null, receipt: null } });
+  return true;
+}
+$('checkOut').addEventListener('click', e => {
+  const one = e.target.closest('[data-fix-log]'), all = e.target.closest('#fixAll');
+  if (!one && !all) return;
+  const idx = one ? [+one.dataset.fixLog] : unlogged.map((_, i) => i);
+  const missingDeal = idx.filter(i => !logFromItison(i));
+  save(); render();
+  if (missingDeal.length) { toast(`Pick the deal for ${unlogged[missingDeal[0]].code} first.`, 'bad'); if (idx.length === missingDeal.length) return; }
+  else toast(idx.length === 1 ? `${unlogged[idx[0]].code} logged.` : `${idx.length} vouchers logged.`);
+  $('runCheck').click();   // check again, so the result shows the log as it is now
 });
 
 $('runCheck').addEventListener('click', async () => {
@@ -974,7 +1019,7 @@ $('runCheck').addEventListener('click', async () => {
     if (!missing) out.push(resultHTML('ok','itison matches the log', t.length ? `All ${t.length} logged ${plural(t.length,'voucher')} were redeemed on itison tonight, and nothing else was.` : 'Nothing logged and nothing redeemed on itison tonight.'));
     else if (fine) out.push(resultHTML('ok',`${fine} ${plural(fine,'voucher')} ${fine===1?'matches':'match'} itison`,''));
     if (notRedeemed.length) out.push(resultHTML('bad',`${notRedeemed.length} logged but not redeemed on itison`,`itison won't pay for ${notRedeemed.length===1?'it':'them'} until ${notRedeemed.length===1?"it's":"they're"} redeemed on the Hub:`, notRedeemed));
-    if (extra.length) out.push(resultHTML('bad',`${extra.length} redeemed on itison but not logged`,'Redeemed on itison tonight but missing from Voucher Desk. Log them so the till and the log match:', extra.map(r => `${r.code} · ${timeOf(r.at)}${r.title ? ' · ' + r.title : ''}`)));
+    if (extra.length) out.push(unloggedHTML(extra));
     if (otherNight.length) out.push(resultHTML('warn',`${otherNight.length} redeemed on itison on a different night`,'Logged tonight, but itison has them redeemed at another time. Check they weren\'t used twice:', otherNight));
     if (unknown.length) out.push(itisonErr
       ? resultHTML('warn',`${unknown.length} not checked`,"Probably in the itison list that couldn't be fetched. Check them on the Hub:", unknown)
