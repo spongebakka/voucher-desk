@@ -73,7 +73,7 @@
   // Tell Voucher Desk how it went, then close this tab so you land back on Voucher Desk.
   const finishWith = (result, text, good) => {
     stop(); say(text, good); tell(result);
-    setTimeout(() => chrome.runtime.sendMessage({ type: 'vd-close' }).catch(() => {}), 1500);
+    setTimeout(() => chrome.runtime.sendMessage({ type: 'vd-close' }).catch(() => {}), 800);
   };
   const pageSays = re => re.test(document.body.innerText || '');
   const timer = setInterval(() => {
@@ -97,7 +97,7 @@
         if (!box) return;                                      // page still loading
         // itison searched for this code (it's in the address) but shows nothing: it doesn't know the code.
         const searched = squash(new URLSearchParams(location.search).get('redeem-code')) === squash(code);
-        if (searched && searchedAt && Date.now() - searchedAt > 8000) {
+        if (searched && searchedAt && Date.now() - searchedAt > 2000) {
           finishWith({ status: 'notfound' }, "itison didn't find this code."); return;
         }
         if (!searchedAt) {
