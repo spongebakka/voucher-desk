@@ -15,7 +15,9 @@ If something's wrong, the itison tab closes too, and Voucher Desk shows a red wa
 
 Press **Back to details** to fix the code or PIN and try again, or **itison rejected it** to give up.
 
-It only runs on itison Hub pages and on Voucher Desk. It doesn't send anything anywhere else or save anything.
+At the end of the night, **End of shift → Run the check** asks the add-on to fetch each deal's voucher list from itison (the links in Voucher Desk's Settings), using this laptop's itison login. Voucher Desk then flags any voucher that's logged but not redeemed on itison, or redeemed on itison but not logged.
+
+It only runs on itison Hub pages and on Voucher Desk, and only fetches itison's own deal lists. It doesn't send anything anywhere else or save anything.
 
 ## Install (once, on the host desk laptop)
 
