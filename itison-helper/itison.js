@@ -15,7 +15,11 @@
   const code = ((fromLink ? params.get('vd-code') : memo && memo.until > Date.now() && memo.code) || '').trim();
   const pin = ((fromLink ? params.get('vd-pin') : memo && memo.pin) || '').trim();
   if (!/^[A-Za-z0-9-]{3,40}$/.test(code)) return;
-  const remember = on => { try { on ? sessionStorage.setItem(MEMO, JSON.stringify({ code, pin, until: Date.now() + 120000 })) : sessionStorage.removeItem(MEMO); } catch (e) {} };
+  // Count page loads for this voucher. If the page keeps reloading, stop instead of going round in circles.
+  // nudged: already tried pressing Enter once, so never again for this voucher. valid: itison has shown it as valid.
+  const saved = fromLink ? { code, pin, until: Date.now() + 120000, loads: 1 } : { ...memo, loads: (memo.loads || 0) + 1 };
+  const remember = (on, extra) => { try { Object.assign(saved, extra); on ? sessionStorage.setItem(MEMO, JSON.stringify(saved)) : sessionStorage.removeItem(MEMO); } catch (e) {} };
+  if (saved.loads > 4) { remember(false); return; }
   remember(true);
   // Take the code and PIN out of the address bar.
   if (fromLink) history.replaceState(history.state, '', location.pathname + location.search);
@@ -47,7 +51,6 @@
   // What itison is showing for our code: 'valid', 'redeemed' or null (not shown yet / something else).
   const readVoucher = () => {
     const text = document.body.innerText || '';
-    if (!squash(text).includes(squash(code))) return null;
     const deal = (text.match(/£\s?\d[\d,]*(?:\.\d\d)?\s+voucher[^\n\t]*/i) || [''])[0].replace(/\s*View voucher details.*$/i, '').trim();
     const face = parseFloat((deal.match(/£\s?([\d,]+(?:\.\d\d)?)/) || [, ''])[1].replace(/,/g, '')) || null;
     if (/This voucher has been redeemed/i.test(text)) {
@@ -60,7 +63,7 @@
 
   const tell = result => chrome.runtime.sendMessage({ type: 'vd-result', result: { code, ...result } }).catch(() => {});
 
-  let step = 'search', tries = 0, searchedAt = 0, nudges = 0, firstStatus = null;
+  let step = 'search', tries = 0, searchedAt = 0, nudges = saved.nudged ? 1 : 0, firstStatus = saved.valid ? 'valid' : null;
   const stop = () => { clearInterval(timer); remember(false); };
   const timer = setInterval(() => {
     if (++tries > 4 * 60 * 15) { stop(); return; }   // give up after 15 minutes
@@ -79,14 +82,10 @@
         const wait = Date.now() - searchedAt;
         if (nudges === 0 && wait > 1000) {
           nudges++;
+          remember(true, { nudged: true });   // if this reloads the page, don't do it again
           for (const t of ['keydown', 'keypress', 'keyup'])
             box.dispatchEvent(new KeyboardEvent(t, { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
         } else if (nudges === 1 && wait > 2200) {
-          nudges++;
-          const form = box.form || box.closest('form');
-          const go = form && [...form.querySelectorAll('button, input[type=submit]')].find(b => b.type === 'submit' && !b.disabled);
-          if (go) go.click(); else if (form) form.requestSubmit();
-        } else if (nudges === 2 && wait > 3500) {
           nudges++;
           say('code filled in. Press Enter to search.');
         }
@@ -95,14 +94,17 @@
     }
 
     if (step === 'check') {
-      firstStatus = v.status;
-      if (v.status === 'redeemed') {
+      if (v.status === 'redeemed' && firstStatus === 'valid') step = 'wait';   // itison reloaded the page after you pressed Redeem
+      else if (v.status === 'redeemed') {
         say('itison says this voucher was already used. Check with the customer.');
         tell({ status: 'already', deal: v.deal, face: v.face, usedAt: v.usedAt });
         stop(); return;
       }
-      tell({ status: 'valid', deal: v.deal, face: v.face });
-      step = 'open';
+      else {
+        firstStatus = 'valid'; remember(true, { valid: true });
+        tell({ status: 'valid', deal: v.deal, face: v.face });
+        step = 'open';
+      }
     }
 
     if (step === 'open') {
