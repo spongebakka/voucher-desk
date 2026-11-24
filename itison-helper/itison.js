@@ -61,7 +61,8 @@
       return { status: 'redeemed', deal, face, usedAt };
     }
     if (/This voucher is valid for use/i.test(text) || /^(valid|active|available|unused|live|booked|purchased|paid)$/i.test(label)) return { status: 'valid', deal, face, label };
-    if (label) return { status: 'other', deal, face, label };
+    if (/^(expired|cancelled|canceled|refunded|void|voided|invalid)$/i.test(label)) return { status: 'other', deal, face, label };
+    if (label) return { status: 'unknown', deal, face, label };   // a word we don't know: open the details to find out
     return null;
   };
 
@@ -73,6 +74,13 @@
     if (++tries > 4 * 60 * 15) { stop(); return; }   // give up after 15 minutes
     const v = readVoucher();
 
+    if (step === 'search' && v && v.status === 'unknown') {
+      const row = shortResult();
+      if (row && !row.dataset.vdClicked) { row.dataset.vdClicked = '1'; row.click(); }
+      else if (!row || Date.now() - (+row.dataset.vdAt || (row.dataset.vdAt = Date.now())) > 3000)
+        say(`itison says "${v.label}". Open the voucher to see if it can be redeemed.`);
+      return;
+    }
     if (step === 'search') {
       if (v) { step = 'check'; }
       else {
@@ -129,7 +137,12 @@
         const btn = [...document.querySelectorAll('button, a, input[type=button], input[type=submit]')]
           .find(b => visible(b) && /^\s*Redeem voucher\s*$/i.test(b.innerText || b.value || ''));
         if (btn && !btn.dataset.vdClicked) { btn.dataset.vdClicked = '1'; btn.click(); }   // only opens itison's PIN box
-        else if (!btn) say('valid. Open the voucher and press Redeem voucher. The PIN will fill in.');
+        else if (!btn) {
+          // Short layout: clicking the result opens the full details, which have the Redeem voucher button.
+          const row = shortResult();
+          if (row && !row.dataset.vdClicked) { row.dataset.vdClicked = '1'; row.click(); }
+          else say('valid. Open the voucher and press Redeem voucher. The PIN will fill in.');
+        }
         return;
       }
     }
@@ -145,6 +158,16 @@
       }
     }
   }, 250);
+
+  // In the short layout, the bit of the result that says "Status: …" (clicking it opens the details).
+  function shortResult(){
+    const all = document.body.querySelectorAll('*');
+    for (const el of all) {
+      if (!visible(el) || el.closest('a[href]:not([href="#"])')) continue;   // never follow a link to another page
+      if ([...el.childNodes].some(n => n.nodeType === 3 && /Status:/.test(n.textContent))) return el;
+    }
+    return null;
+  }
 
   // itison's "Enter verification PIN" box: a visible text box near the words "PIN".
   function pinInput(){
