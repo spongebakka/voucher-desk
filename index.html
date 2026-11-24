@@ -297,6 +297,42 @@ td.c,th.c{text-align:center}
 .banner{display:flex;gap:10px;align-items:center;background:var(--bad-soft);color:var(--bad);border-radius:var(--r);padding:12px 16px;font-size:14px;margin-bottom:20px}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* ---------- How to guide ---------- */
+.guide{display:grid;grid-template-columns:220px minmax(0,760px);gap:32px;align-items:start}
+.guide-toc{position:sticky;top:84px;display:flex;flex-direction:column;gap:2px;font-size:14px}
+.guide-toc a{color:var(--ink-2);text-decoration:none;padding:7px 12px;border-radius:var(--r-sm)}
+.guide-toc a:hover{background:var(--surface-2);color:var(--ink)}
+.guide-toc .btn{margin-top:12px}
+.guide-body{display:flex;flex-direction:column;gap:24px}
+.guide-body section.panel{scroll-margin-top:84px}
+.guide-body h2{font-size:20px;font-weight:600;letter-spacing:-.3px;margin:0 0 6px}
+.guide-body h3{font-size:16px;font-weight:600;margin:22px 0 8px}
+.guide-body p,.guide-body li{font-size:16px;line-height:1.6;color:var(--ink)}
+.guide-body p{margin:0 0 12px}
+.guide-body .lead{color:var(--ink-2);margin-bottom:16px}
+.g-steps{list-style:none;counter-reset:g;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.g-steps > li{counter-increment:g;display:grid;grid-template-columns:36px minmax(0,1fr);gap:14px;align-items:start}
+.g-steps > li::before{content:counter(g);width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-weight:700;display:grid;place-items:center;font-size:15px}
+.g-steps > li > div{padding-top:3px}
+.g-steps small{display:block;font-size:14px;color:var(--ink-2);margin-top:2px}
+.ui{display:inline-block;font-size:14px;font-weight:600;line-height:1.2;padding:3px 9px;border-radius:6px;border:1px solid var(--line-2);background:var(--surface);color:var(--ink);white-space:nowrap}
+.ui.blue{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ui.green{background:#2f9e44;border-color:#2f9e44;color:#fff}
+.ui.red{color:var(--bad);border-color:var(--bad-soft);background:var(--bad-soft)}
+.g-box{border-radius:var(--r-sm);padding:14px 16px;margin:14px 0 0;font-size:15px;line-height:1.55}
+.g-box.rules{background:var(--accent-soft);color:var(--ink)}
+.g-box.rules ol{margin:6px 0 0;padding-left:22px}
+.g-box.tip{background:var(--surface-2);color:var(--ink-2)}
+.g-table{width:100%;border-collapse:collapse;margin-top:8px}
+.g-table td{white-space:normal;vertical-align:top;padding:10px 12px;font-size:15px;line-height:1.5}
+.g-table td:first-child{width:38%;font-weight:600}
+@media (max-width:1000px){.guide{grid-template-columns:minmax(0,1fr)}.guide-toc{position:static;flex-direction:row;flex-wrap:wrap}}
+@media print{
+  .bar,.guide-toc,#storageBanner,.toast{display:none !important}
+  body{background:#fff}
+  .guide{display:block}
+  .guide-body section.panel{box-shadow:none;break-inside:avoid-page;margin-bottom:16px}
+}
 </style>
 </head>
 <body>
@@ -324,6 +360,7 @@ td.c,th.c{text-align:center}
       <button class="tab" role="tab" data-tab="close" aria-selected="false">End of shift</button>
       <button class="tab" role="tab" data-tab="history" aria-selected="false">History</button>
       <button class="tab" role="tab" data-tab="settings" aria-selected="false">Settings</button>
+      <button class="tab" role="tab" data-tab="help" aria-selected="false">How to</button>
     </nav>
     <div class="night" id="nightLabel"></div>
   </div>
@@ -570,6 +607,134 @@ td.c,th.c{text-align:center}
       </div>
     </div>
   </section>
+
+  <!-- ================= HOW TO ================= -->
+  <section id="tab-help" hidden>
+    <div class="page-head"><div><h1>How to use Voucher Desk</h1><p>A plain-English guide for anyone on the host desk.</p></div></div>
+    <div class="guide">
+      <nav class="guide-toc" aria-label="Guide sections">
+        <a href="#g-what">What it's for</a>
+        <a href="#g-redeem">Taking a voucher</a>
+        <a href="#g-problems">If something goes wrong</a>
+        <a href="#g-till">The till</a>
+        <a href="#g-end">End of the night</a>
+        <a href="#g-history">Checking past days</a>
+        <a href="#g-settings">Settings</a>
+        <a href="#g-help">Quick fixes</a>
+        <button type="button" class="btn sm" id="printGuide">Print this guide</button>
+      </nav>
+      <div class="guide-body">
+
+        <section class="panel" id="g-what"><div class="panel-body">
+          <h2>What Voucher Desk is for</h2>
+          <p>Customers pay with itison vouchers. Voucher Desk is where we <b>record every voucher we take</b>. It also checks our records against itison's, so we know every voucher has been paid for.</p>
+          <p>It only works on <b>this laptop</b>, in Chrome. Everything is saved on this laptop.</p>
+          <div class="g-box rules"><b>Three golden rules</b>
+            <ol>
+              <li>Every voucher goes through Voucher Desk. Never redeem one straight on the itison website.</li>
+              <li>Only press itison's green <span class="ui green">Redeem</span> button when the customer is here and using the voucher. It can't be undone.</li>
+              <li>Once a week, press <span class="ui">Download backup</span> in Settings.</li>
+            </ol>
+          </div>
+        </div></section>
+
+        <section class="panel" id="g-redeem"><div class="panel-body">
+          <h2>Taking a voucher</h2>
+          <p class="lead">Do this as soon as the customer gives you their voucher, usually when they arrive.</p>
+          <ol class="g-steps">
+            <li><div>Ask the customer for their <b>voucher code</b> and <b>PIN</b>.<small>Both are on their voucher. The code looks like 1234-ABCDEF. The PIN is 4 numbers, just under the code.</small></div></li>
+            <li><div>Click the <span class="ui">Tonight</span> tab at the top.</div></li>
+            <li><div>Type the <b>Voucher code</b>, the <b>PIN</b> and the <b>Table</b> number, and choose your name under <b>Logged by</b>.</div></li>
+            <li><div>Press the blue <span class="ui blue">Redeem on itison</span> button.<small>A new itison tab opens. It finds the voucher and fills in the PIN by itself. Give it a few seconds.</small></div></li>
+            <li><div>On itison, check the PIN in the box matches the customer's PIN, then press the green <span class="ui green">Redeem</span> button.</div></li>
+            <li><div>That's it. The itison tab closes by itself, you're back in Voucher Desk, and the voucher appears in tonight's list.</div></li>
+          </ol>
+          <div class="g-box tip"><b>New deal?</b> The first time a new kind of voucher comes in, Voucher Desk asks which deal it is. Choose it from the <b>Deal</b> list and press <span class="ui">Accepted, log it</span>. It remembers your answer for next time.</div>
+        </div></section>
+
+        <section class="panel" id="g-problems"><div class="panel-body">
+          <h2>If something goes wrong</h2>
+          <p class="lead">If there's a problem, itison closes and Voucher Desk shows a <b>red message</b>. Here's what each one means.</p>
+          <table class="g-table"><tbody>
+            <tr><td>"The PIN is wrong"</td><td>Nothing was used up. Check the PIN with the customer, press <span class="ui">Back to details</span>, correct it, and press <span class="ui blue">Redeem on itison</span> again.</td></tr>
+            <tr><td>"Didn't find this code" or "isn't a full voucher code"</td><td>The code was probably typed wrong. Check it with the customer, press <span class="ui">Back to details</span>, correct it, and try again.</td></tr>
+            <tr><td>"Already used"</td><td>This voucher has been used before. Don't accept it. Tell the customer politely, and press <span class="ui red">itison rejected it</span>.</td></tr>
+            <tr><td>"Expired"</td><td>The voucher is out of date. Press <span class="ui red">itison rejected it</span>.</td></tr>
+            <tr><td>"Hasn't heard from itison"</td><td>Something got stuck. Finish on the itison tab yourself (press its green <span class="ui green">Redeem</span>), then come back and press <span class="ui">Accepted, log it</span>. If itison refused it, press <span class="ui red">itison rejected it</span> instead.</td></tr>
+          </tbody></table>
+          <div class="g-box tip">While you type a code, Voucher Desk may warn you straight away that it's <b>already been redeemed</b> here before. If you see that, stop and check before going any further.</div>
+        </div></section>
+
+        <section class="panel" id="g-till"><div class="panel-body">
+          <h2>The till</h2>
+          <p>Each voucher in tonight's list shows its <b>till amount</b>, which is what we put through the till as itison revenue.</p>
+          <ol class="g-steps">
+            <li><div>Put the till amount through the till as <b>itison</b>, on a blank table, the way we always do.</div></li>
+            <li><div>In tonight's list, click <span class="ui">Till</span> next to that voucher so it gets a tick.</div></li>
+            <li><div>When the receipt is in the till, click <span class="ui">Receipt</span> as well.<small>Once all three are ticked, the voucher moves from <b>Needs finishing</b> to <b>Done</b>.</small></div></li>
+          </ol>
+          <div class="g-box tip">Made a mistake? Click the <b>pencil</b> next to a voucher to change it, or the <b>bin</b> to remove it (click the bin twice to confirm).</div>
+        </div></section>
+
+        <section class="panel" id="g-end"><div class="panel-body">
+          <h2>End of the night (cash up)</h2>
+          <ol class="g-steps">
+            <li><div>Print the <b>Waiter Mate end-of-day report</b>. Find the <b>"It is on"</b> line in the payments. That's tonight's itison total.</div></li>
+            <li><div>In Voucher Desk, click the <span class="ui">End of shift</span> tab.</div></li>
+            <li><div>Type that amount into <b>itison total on the till</b>, and choose your name under <b>Checked by</b>.</div></li>
+            <li><div>Make sure the itison website is signed in on this laptop, then press <span class="ui blue">Run the check</span>.<small>Voucher Desk asks itison what it redeemed tonight. This takes a few seconds.</small></div></li>
+            <li><div>Read the results. <b>Green</b> means all good. <b>Red or orange</b> means something needs a look (see below).</div></li>
+          </ol>
+          <table class="g-table"><tbody>
+            <tr><td>"Till matches the log"</td><td>Perfect. The till and Voucher Desk agree.</td></tr>
+            <tr><td>"Till is £… short"</td><td>A voucher was probably never put through the till. Put the missing amount through as itison.</td></tr>
+            <tr><td>"Till is £… over"</td><td>Something went through the till twice, or a voucher went through without being recorded here.</td></tr>
+            <tr><td>"Redeemed on itison but not logged"</td><td>Someone redeemed a voucher straight on itison. Check the deal next to it and press <span class="ui">Log it</span> (or <span class="ui blue">Log all</span>).</td></tr>
+            <tr><td>"Logged but not redeemed on itison"</td><td>itison won't pay us for it. Click the code to open it on itison and redeem it.</td></tr>
+            <tr><td>"Used at <span class="sister-name">the sister restaurant</span>"</td><td>That voucher was already used at our sister restaurant. Check it wasn't used twice.</td></tr>
+          </tbody></table>
+          <div class="g-box tip">The result is saved under <span class="ui">History</span> → <b>End of shift checks</b>.</div>
+        </div></section>
+
+        <section class="panel" id="g-history"><div class="panel-body">
+          <h2>Checking past days</h2>
+          <ol class="g-steps">
+            <li><div>Click the <span class="ui">History</span> tab. It lists every voucher ever recorded.</div></li>
+            <li><div>Choose the dates in <b>From</b> and <b>To</b>. Leave them empty for the last 7 nights.</div></li>
+            <li><div>Press <span class="ui">Check with itison</span>.<small>For each night you'll see how many vouchers itison redeemed, how many we recorded, the money for each, and whether they <b>Match</b>.</small></div></li>
+            <li><div>Click a night to see its details. Anything that doesn't match is explained there, with buttons to fix it.</div></li>
+          </ol>
+          <div class="g-box tip">Vouchers from <span class="sister-name">the sister restaurant</span> that were used here are shown on their own line, so you can see that money separately. To save everything to Excel, press <span class="ui">Download CSV</span>.</div>
+        </div></section>
+
+        <section class="panel" id="g-settings"><div class="panel-body">
+          <h2>Settings (for the person in charge)</h2>
+          <p class="lead">You only need this when something changes, like a new deal or a new member of staff.</p>
+          <h3>Adding a new deal</h3>
+          <ol class="g-steps">
+            <li><div>In <span class="ui">Settings</span>, under <b>Deals</b>, press <span class="ui">Add deal</span>.</div></li>
+            <li><div>Type its name (what you call it on the till) and its <b>till amount</b>.</div></li>
+            <li><div>On the itison website, open the new deal, right-click its download button and choose <b>Copy link address</b>. Paste it into <b>itison download links</b> on its own line.<small>Deals sold by <span class="sister-name">the sister restaurant</span> go in the <b>Sister restaurant's download links</b> box instead.</small></div></li>
+          </ol>
+          <h3>Adding a member of staff</h3>
+          <p>Under <b>Team</b>, type their name and press <span class="ui">Add</span>.</p>
+          <h3>Backups</h3>
+          <p>Press <span class="ui">Download backup</span> once a week and keep the file safe. If the laptop is ever wiped, <span class="ui">Restore backup</span> brings everything back.</p>
+        </div></section>
+
+        <section class="panel" id="g-help"><div class="panel-body">
+          <h2>Quick fixes</h2>
+          <table class="g-table"><tbody>
+            <tr><td>"Couldn't fetch from itison"</td><td>Open the itison website in another tab and sign in, then try again.</td></tr>
+            <tr><td>itison doesn't fill itself in</td><td>Refresh Voucher Desk (press <b>Cmd + R</b>) and try again. If it still doesn't, type the code and PIN on itison yourself.</td></tr>
+            <tr><td>Something looks stuck or wrong</td><td>Press <b>Cmd + R</b> to refresh. Nothing you've recorded will be lost.</td></tr>
+            <tr><td>Anything else</td><td>Write down what happened (or take a photo of the screen) and tell the person who looks after Voucher Desk.</td></tr>
+          </tbody></table>
+        </div></section>
+
+      </div>
+    </div>
+  </section>
 </main>
 
 <dialog class="edit" id="editDlg">
@@ -638,7 +803,7 @@ function toast(text, kind='ok'){
 }
 
 /* ---------- tabs (hash so a tab can be bookmarked) ---------- */
-const TABS = ['tonight','close','history','settings'];
+const TABS = ['tonight','close','history','settings','help'];
 function showTab(t){
   if (!TABS.includes(t)) t = 'tonight';
   document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
@@ -646,6 +811,7 @@ function showTab(t){
   if (t === 'history') renderHistory();
   if (t === 'settings') renderSettings();
   if (t === 'close') renderItisonSource();
+  if (t === 'help') document.querySelectorAll('.sister-name').forEach(e => e.textContent = sisterName());
   window.scrollTo(0,0);
 }
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { history.replaceState(null,'','#'+b.dataset.tab); showTab(b.dataset.tab); }));
@@ -1075,7 +1241,9 @@ function logFromItison(scope, i){
   if (live().some(v => norm(v.code) === norm(r.code))) return true;   // already logged
   if (r.title) state.settings.itisonDeals[r.title] = d.name;           // remember the match, like after a redemption
   state.vouchers.push({ id: uid(), code: r.code.toUpperCase(), at: r.at, night: nightOf(r.at), pin: r.pin || '', table: '', deal: d.name, value: d.value,
-    staff: $('closer').value, note: scope === 'close' ? 'Logged from itison at end of shift' : 'Logged from itison (History check)', steps: { itison: r.at, till: null, receipt: null } });
+    staff: $('closer').value, note: scope === 'close' ? 'Logged from itison at end of shift' : 'Logged from itison (History check)',
+    // A past night is already cashed up, so its till and receipt steps count as done. Tonight's still need doing.
+    steps: { itison: r.at, till: nightOf(r.at) === tonight() ? null : r.at, receipt: nightOf(r.at) === tonight() ? null : r.at } });
   return true;
 }
 document.addEventListener('click', e => {
@@ -1328,6 +1496,20 @@ $('restoreFile').addEventListener('change', async e => {
     toast(`Restored ${added.length} ${plural(added.length,'voucher')}.`);
   } catch(err){ toast("That file isn't a Voucher Desk backup.", 'bad'); }
   e.target.value = '';
+});
+
+// One-off tidy: vouchers logged from the History check for past nights were left with Till and Receipt unticked,
+// so they all sat under "Needs finishing". Those nights are cashed up, so tick them. Safe to run again.
+{ let n = 0;
+  for (const v of state.vouchers) if (!v.deleted && v.note === 'Logged from itison (History check)' && v.night !== tonight() && !(v.steps.till && v.steps.receipt)) {
+    v.steps.till = v.steps.till || v.at; v.steps.receipt = v.steps.receipt || v.at; n++;
+  }
+  if (n) save(); }
+
+$('printGuide').addEventListener('click', () => window.print());
+document.querySelector('.guide-toc').addEventListener('click', e => {   // jump within the guide without changing the tab in the address bar
+  const a = e.target.closest('a[href^="#g-"]'); if (!a) return;
+  e.preventDefault(); document.querySelector(a.getAttribute('href')).scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 fillSelects();
