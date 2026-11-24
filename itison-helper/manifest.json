@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Voucher Desk itison helper",
-  "version": "2.6",
-  "description": "Fills in the code and PIN on the itison Hub, then tells Voucher Desk when a voucher is redeemed.",
+  "version": "2.8",
+  "description": "Fills in the code and PIN on the itison Hub, tells Voucher Desk when a voucher is redeemed, and fetches itison's deal lists for the end of shift check.",
   "background": {
     "service_worker": "background.js"
   },
@@ -10,7 +10,9 @@
     "scripting"
   ],
   "host_permissions": [
-    "https://*.netlify.app/*"
+    "https://*.netlify.app/*",
+    "https://itison.com/*",
+    "https://www.itison.com/*"
   ],
   "content_scripts": [
     {
