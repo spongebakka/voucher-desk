@@ -874,6 +874,8 @@ function resultHTML(kind, title, text, codes){
 const EXPORT_RE = /^https:\/\/(www\.)?itison\.com\/hub\/company\/\d+\/products\/\d+\/guestlists\.csv$/;
 const exportLinks = () => state.settings.itisonExports.filter(u => EXPORT_RE.test(u));
 const helperOn = () => !!document.documentElement.dataset.vdHelper;
+// Fetching itison's lists needs add-on 2.8 or later, and a refresh of this page after updating it.
+const helperCanFetch = () => { const [a, b] = String(document.documentElement.dataset.vdHelper || '0').split('.').map(Number); return a > 2 || (a === 2 && b >= 8); };
 let itisonFiles = null;   // downloaded files picked by hand, as text
 function parseCSV(text){
   const rows = []; let row = [], f = '', q = false;
@@ -905,7 +907,7 @@ function fetchLists(urls){
     const id = uid();
     const done = (fn, v) => { clearTimeout(timer); window.removeEventListener('message', on); fn(v); };
     const on = e => { const m = e.data; if (e.source === window && m && m.from === 'vd-helper' && m.type === 'csv' && m.id === id) done(resolve, m.files); };
-    const timer = setTimeout(() => done(reject, new Error("the itison helper add-on didn't answer")), 45000);
+    const timer = setTimeout(() => done(reject, new Error("the itison helper add-on didn't answer. If you've just updated it, refresh this page and try again")), 45000);
     window.addEventListener('message', on);
     window.postMessage({ to: 'vd-helper', type: 'fetch-csv', id, urls }, location.origin);
   });
@@ -915,6 +917,7 @@ function renderItisonSource(){
   $('itisonSource').innerHTML = itisonFiles
     ? `Using ${itisonFiles.length} downloaded ${plural(itisonFiles.length,'file')}. <a href="#" id="useFetch">Fetch from itison instead</a>`
     : !helperOn() ? 'Install the itison helper add-on (see Settings) to fetch these from itison automatically, or use downloaded files.'
+    : !helperCanFetch() ? `The itison helper add-on on this laptop is version ${esc(document.documentElement.dataset.vdHelper)}. Update it to 2.8 or later, then refresh this page, to fetch from itison. Or use downloaded files.`
     : !n ? 'Add the itison download links in Settings to fetch these automatically, or use downloaded files.'
     : `Fetched from itison (${n} ${plural(n,'deal list')}) when you run the check.`;
 }
@@ -972,7 +975,7 @@ $('runCheck').addEventListener('click', async () => {
   const t = live().filter(v => v.night === n);
   const logged = t.reduce((s,v) => s + v.value, 0);
   const tillRaw = $('tillTotal').value.trim();
-  const canItison = !!itisonFiles || (helperOn() && exportLinks().length > 0);
+  const canItison = !!itisonFiles || (helperCanFetch() && exportLinks().length > 0);
   if (!t.length && !tillRaw && !canItison) { toast('Nothing logged tonight and no till total entered.', 'warn'); return; }
 
   // Get tonight's picture from itison: downloaded files, or fetched by the helper add-on.
