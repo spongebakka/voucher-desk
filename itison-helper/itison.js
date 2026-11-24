@@ -48,16 +48,20 @@
     note.textContent = 'Voucher Desk: ' + text;
   };
 
-  // What itison is showing for our code: 'valid', 'redeemed' or null (not shown yet / something else).
+  // What itison is showing for our code: 'valid', 'redeemed', 'other' (e.g. expired) or null (no result yet).
+  // itison has two layouts: a big panel ("This voucher is valid for use" / "This voucher has been redeemed")
+  // and a short one ("Status: Redeemed").
   const readVoucher = () => {
     const text = document.body.innerText || '';
-    const deal = (text.match(/£\s?\d[\d,]*(?:\.\d\d)?\s+voucher[^\n\t]*/i) || [''])[0].replace(/\s*View voucher details.*$/i, '').trim();
+    const deal = (text.match(/£\s?\d[\d,]*(?:\.\d\d)?\s+voucher[^\n\t]*/i) || [''])[0].replace(/\s*View voucher.*$/i, '').trim();
     const face = parseFloat((deal.match(/£\s?([\d,]+(?:\.\d\d)?)/) || [, ''])[1].replace(/,/g, '')) || null;
-    if (/This voucher has been redeemed/i.test(text)) {
+    const label = (text.match(/Status:\s*([A-Za-z]+)/) || [, ''])[1];
+    if (/This voucher has been redeemed/i.test(text) || /^redeemed$/i.test(label)) {
       const usedAt = (text.match(/marked this voucher as used at ([^\n]+?)\./i) || [, ''])[1];
       return { status: 'redeemed', deal, face, usedAt };
     }
-    if (/This voucher is valid for use/i.test(text)) return { status: 'valid', deal, face };
+    if (/This voucher is valid for use/i.test(text) || /^(valid|active|available|unused|live|booked|purchased|paid)$/i.test(label)) return { status: 'valid', deal, face, label };
+    if (label) return { status: 'other', deal, face, label };
     return null;
   };
 
@@ -95,6 +99,11 @@
 
     if (step === 'check') {
       if (v.status === 'redeemed' && firstStatus === 'valid') step = 'wait';   // itison reloaded the page after you pressed Redeem
+      else if (v.status === 'other') {
+        say(`itison says this voucher is "${v.label}". Check with the customer.`);
+        tell({ status: 'other', deal: v.deal, face: v.face, label: v.label });
+        stop(); return;
+      }
       else if (v.status === 'redeemed') {
         say('itison says this voucher was already used. Check with the customer.');
         tell({ status: 'already', deal: v.deal, face: v.face, usedAt: v.usedAt });
@@ -120,6 +129,7 @@
         const btn = [...document.querySelectorAll('button, a, input[type=button], input[type=submit]')]
           .find(b => visible(b) && /^\s*Redeem voucher\s*$/i.test(b.innerText || b.value || ''));
         if (btn && !btn.dataset.vdClicked) { btn.dataset.vdClicked = '1'; btn.click(); }   // only opens itison's PIN box
+        else if (!btn) say('valid. Open the voucher and press Redeem voucher. The PIN will fill in.');
         return;
       }
     }

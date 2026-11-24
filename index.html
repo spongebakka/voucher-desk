@@ -637,9 +637,13 @@ async function copyText(text, label){
 function openItison(){
   const url = state.settings.hubUrl;
   if (!url) { toast('Add the itison link in Settings so this button can open it.', 'warn'); return; }
-  // The code rides along after the # so the itison helper add-on can fill it in. It never reaches itison's server.
-  const code = pending ? `#vd-code=${encodeURIComponent(pending.code)}&vd-pin=${encodeURIComponent(pending.pin)}` : '';
-  window.open(url.split('#')[0] + code, '_blank', 'noopener');
+  // ?redeem-code= is the address itison's own search uses, so itison shows the voucher straight away.
+  // The code and PIN after the # are for the itison helper add-on. That part never reaches itison's server.
+  const base = url.split('#')[0];
+  const link = !pending ? base
+    : base + (base.includes('?') ? '&' : '?') + 'redeem-code=' + encodeURIComponent(pending.code)
+      + `#vd-code=${encodeURIComponent(pending.code)}&vd-pin=${encodeURIComponent(pending.pin)}`;
+  window.open(link, '_blank', 'noopener');
 }
 function setStage(b){
   $('stageA').hidden = b; $('stageB').hidden = !b;
@@ -715,6 +719,8 @@ window.addEventListener('message', e => {
   if (pick.i >= 0) { $('deal').value = String(pick.i); syncDeal(); }
   if (m.status === 'already') {
     showItison('bad', `itison says this code was already used${m.usedAt ? ` (${esc(m.usedAt)})` : ''}. If that was you just now, press Accepted. Otherwise check with the customer.`);
+  } else if (m.status === 'other') {
+    showItison('bad', `itison says this voucher is <b>${esc(m.label)}</b>. Check with the customer before going any further.`);
   } else if (m.status === 'valid') {
     showItison('ok', `itison says it's valid: <b>${dealText}</b>. Press Redeem on itison to finish.`);
   } else if (m.status === 'redeemed') {
