@@ -657,6 +657,7 @@ $('addForm').addEventListener('submit', async e => {
   if (dupCheck()) { toast('That code is already redeemed. Check before trying again.', 'bad'); return; }
   if (!/^\d{4}$/.test(pin)) { toast('The PIN is 4 digits.', 'bad'); $('pin').focus(); return; }
   pending = { code, pin, table: $('table').value.trim(), staff: $('staff').value, note: $('note').value.trim() };
+  document.documentElement.dataset.vdPending = code;   // tells the helper add-on which tab to come back to
   $('rCode').textContent = code; $('rPin').textContent = pin;
   $('rSummary').textContent = `Table ${pending.table || '–'} · ${pending.staff || 'No name'}`;
   showItison(null);
@@ -686,7 +687,7 @@ function finish(accepted){
   if (!accepted) v.status = 'rejected';
   state.vouchers.push(v); save();
   flashId = v.id; setTimeout(() => { flashId = null; }, 1500);
-  pending = null;
+  pending = null; document.documentElement.dataset.vdPending = '';
   ['code','pin','table','note'].forEach(id => $(id).value = '');
   $('noteWrap').hidden = true; $('addNote').hidden = false; dupCheck();
   if (state.settings.deals.length > 1) { $('deal').value = ''; syncDeal(); }
