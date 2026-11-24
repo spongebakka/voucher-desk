@@ -1075,7 +1075,9 @@ function logFromItison(scope, i){
   if (live().some(v => norm(v.code) === norm(r.code))) return true;   // already logged
   if (r.title) state.settings.itisonDeals[r.title] = d.name;           // remember the match, like after a redemption
   state.vouchers.push({ id: uid(), code: r.code.toUpperCase(), at: r.at, night: nightOf(r.at), pin: r.pin || '', table: '', deal: d.name, value: d.value,
-    staff: $('closer').value, note: scope === 'close' ? 'Logged from itison at end of shift' : 'Logged from itison (History check)', steps: { itison: r.at, till: null, receipt: null } });
+    staff: $('closer').value, note: scope === 'close' ? 'Logged from itison at end of shift' : 'Logged from itison (History check)',
+    // A past night is already cashed up, so its till and receipt steps count as done. Tonight's still need doing.
+    steps: { itison: r.at, till: nightOf(r.at) === tonight() ? null : r.at, receipt: nightOf(r.at) === tonight() ? null : r.at } });
   return true;
 }
 document.addEventListener('click', e => {
@@ -1329,6 +1331,14 @@ $('restoreFile').addEventListener('change', async e => {
   } catch(err){ toast("That file isn't a Voucher Desk backup.", 'bad'); }
   e.target.value = '';
 });
+
+// One-off tidy: vouchers logged from the History check for past nights were left with Till and Receipt unticked,
+// so they all sat under "Needs finishing". Those nights are cashed up, so tick them. Safe to run again.
+{ let n = 0;
+  for (const v of state.vouchers) if (!v.deleted && v.note === 'Logged from itison (History check)' && v.night !== tonight() && !(v.steps.till && v.steps.receipt)) {
+    v.steps.till = v.steps.till || v.at; v.steps.receipt = v.steps.receipt || v.at; n++;
+  }
+  if (n) save(); }
 
 fillSelects();
 render();
