@@ -231,6 +231,9 @@ dialog.edit .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:2
 .result b{display:block;font-weight:600;margin:4px 0 2px}
 .result p{margin:0;font-size:14px;color:var(--ink-2)}
 .result .codes{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.disc-grid{display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:6px 10px;align-items:center}
+.disc-grid label{font-weight:400;font-size:14px;margin:0;color:var(--ink)}
+.disc-grid .input{height:36px}
 .fix-list{margin-top:10px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
 .fix-row{display:grid;grid-template-columns:minmax(0,1fr) 220px auto;gap:10px;align-items:center;padding:8px 10px;border-top:1px solid var(--line);background:var(--surface)}
 .fix-row:first-child{border-top:0}
@@ -427,6 +430,11 @@ td.c,th.c{text-align:center}
               <p class="help">From the Waiter Mate end-of-day report.</p>
             </div>
             <div class="f full">
+              <label>Voucher discounts on the till <span style="color:var(--ink-3);font-weight:400">optional</span></label>
+              <div class="disc-grid" id="discRows"></div>
+              <p class="help">How many of each voucher were taken off bills, from the discount lines on the Waiter Mate report (e.g. "2 ITISON £50 VOUCHER"). Checked against itison, to catch a voucher taken off a bill but never redeemed.</p>
+            </div>
+            <div class="f full">
               <label>itison redemptions</label>
               <p class="help" id="itisonSource" style="margin:0 0 8px"></p>
               <label class="btn sm" style="width:fit-content;cursor:pointer"><svg class="ic"><use href="#i-plus"/></svg>Use downloaded files instead<input type="file" id="csvFiles" accept=".csv,text/csv" multiple hidden></label>
@@ -614,7 +622,7 @@ function showTab(t){
   TABS.forEach(x => $('tab-'+x).hidden = x !== t);
   if (t === 'history') renderHistory();
   if (t === 'settings') renderSettings();
-  if (t === 'close') renderItisonSource();
+  if (t === 'close') { renderItisonSource(); renderDiscRows(); }
   window.scrollTo(0,0);
 }
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { history.replaceState(null,'','#'+b.dataset.tab); showTab(b.dataset.tab); }));
@@ -912,6 +920,13 @@ function fetchLists(urls){
     window.postMessage({ to: 'vd-helper', type: 'fetch-csv', id, urls }, location.origin);
   });
 }
+// One count box per deal for the till's voucher discount lines. Typed values are kept while the deal list is redrawn.
+function renderDiscRows(){
+  const keep = {}; document.querySelectorAll('[data-disc]').forEach(i => keep[i.dataset.disc] = i.value);
+  $('discRows').innerHTML = state.settings.deals.map((d,i) => `<label for="disc${i}">${esc(d.name)}</label>
+    <input class="input num" id="disc${i}" data-disc="${esc(d.name)}" type="number" min="0" step="1" inputmode="numeric" placeholder="–" value="${esc(keep[d.name] ?? '')}">`).join('')
+    || '<p class="help" style="grid-column:1/-1">Add your deals in Settings first.</p>';
+}
 function renderItisonSource(){
   const n = exportLinks().length;
   $('itisonSource').innerHTML = itisonFiles
@@ -1001,6 +1016,7 @@ $('runCheck').addEventListener('click', async () => {
   else out.push(resultHTML('bad',`Till is ${money(diff)} over`,'Something went through the till as itison without being logged, or went through twice.'));
 
   let missing = null;
+  const itisonTonight = itison && itison.rows.length ? itison.rows.filter(r => r.state.toLowerCase() === 'redeemed' && r.at && nightOf(r.at) === n) : null;
   if (itisonErr) out.push(resultHTML('warn', itison ? 'Part of itison not checked' : 'itison not checked', esc(itisonErr) + ' Make sure itison is signed in on this laptop, or download the lists from the Hub and choose "Use downloaded files instead".'));
   if (itison && !itison.rows.length) out.push(resultHTML('warn','itison not checked',"The itison lists were empty or not in the expected format."));
   else if (itison) {
@@ -1029,6 +1045,27 @@ $('runCheck').addEventListener('click', async () => {
       : resultHTML('warn',`${unknown.length} not in itison's lists`,"Check the code is right. If it's from a deal that isn't in Settings → itison download links, add that deal's link:", unknown));
   }
   else if (!itisonErr) out.push(resultHTML('warn','itison not checked', helperOn() ? 'Add the itison download links in Settings, or choose "Use downloaded files instead", to check every voucher will be paid.' : 'Install the itison helper add-on, or choose "Use downloaded files instead", to check every voucher will be paid.'));
+
+  // Voucher discounts on customers' bills (from the till report) against what itison redeemed tonight, deal by deal.
+  const disc = [...document.querySelectorAll('[data-disc]')].filter(i => i.value.trim() !== '').map(i => ({ name: i.dataset.disc, till: Math.max(0, parseInt(i.value, 10) || 0) }));
+  if (disc.length) {
+    const fromItison = !!itisonTonight && !itisonErr;   // a list that failed would make itison's counts look low
+    const other = fromItison ? 'redeemed on itison' : 'logged';
+    const count = name => fromItison ? itisonTonight.filter(r => state.settings.itisonDeals[r.title] === name).length : t.filter(v => v.deal === name).length;
+    const rows = disc.map(x => ({ ...x, other: count(x.name) }));
+    const over = rows.filter(x => x.till > x.other), under = rows.filter(x => x.till < x.other);
+    const line = x => `${x.name}: ${x.till} off bills, ${x.other} ${other}`;
+    if (!over.length && !under.length) out.push(resultHTML('ok',`Bill discounts match ${fromItison ? 'itison' : 'the log'}`, rows.map(x => `${x.till} × ${esc(x.name)}`).join(', ') + '.'));
+    if (over.length) out.push(resultHTML('bad',`More vouchers taken off bills than ${other}`, fromItison
+      ? "A voucher was taken off a customer's bill but never redeemed on itison, so itison won't pay for it. Find the bill and redeem that voucher on the Hub:"
+      : 'A voucher was taken off a bill but isn\'t in the log. Check it was redeemed on itison, then log it:', over.map(line)));
+    if (under.length) out.push(resultHTML('warn',`Fewer vouchers taken off bills than ${other}`, 'A voucher may have been taken off a bill with a different discount button, or not taken off at all:', under.map(line)));
+    if (fromItison) {
+      const unmatched = [...new Set(itisonTonight.filter(r => !state.settings.deals.some(d => d.name === state.settings.itisonDeals[r.title])).map(r => r.title || r.code))];
+      if (unmatched.length) out.push(resultHTML('warn','Some of tonight\'s itison deals aren\'t matched to a deal','So they aren\'t counted above. Match them in Settings → itison deal matches:', unmatched));
+    } else out.push(resultHTML('warn','Bill discounts checked against the log only',"itison wasn't checked, so the discounts were compared with Voucher Desk's log instead."));
+    missing = (missing || 0) + over.length + under.length;
+  }
 
   const open = t.filter(v => !isDone(v));
   if (open.length) out.push(resultHTML('warn',`${open.length} ${plural(open.length,'voucher')} with steps not ticked`,'They stay under Needs finishing on the Tonight tab.', open));
