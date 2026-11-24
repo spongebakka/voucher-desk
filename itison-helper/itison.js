@@ -53,7 +53,14 @@
   // and a short one ("Status: Redeemed").
   const readVoucher = () => {
     const text = document.body.innerText || '';
-    const deal = (text.match(/£\s?\d[\d,]*(?:\.\d\d)?\s+voucher[^\n\t]*/i) || [''])[0].replace(/\s*View voucher.*$/i, '').trim();
+    // The deal's description sits just before itison's "View voucher" link, on the same line or the line above.
+    // It can be any wording ("£50 voucher to spend on food & drinks", "Afternoon tea for two"…).
+    const lines = text.split(/[\n\t]/).map(l => l.trim()).filter(Boolean);
+    const at = lines.findIndex(l => /View voucher/i.test(l));
+    let deal = at < 0 ? '' : lines[at].replace(/\s*View voucher.*$/i, '').trim() || lines[at - 1] || '';
+    if (!deal || /Expires on|Book by|Status:|^\d{4}-[A-Z]{6}$/i.test(deal))
+      deal = (text.match(/£\s?\d[\d,]*(?:\.\d\d)?\s+voucher[^\n\t]*/i) || [''])[0].replace(/\s*View voucher.*$/i, '').trim();
+    deal = deal.replace(/\s+/g, ' ').replace(/[\s›>]+$/, '');
     const face = parseFloat((deal.match(/£\s?([\d,]+(?:\.\d\d)?)/) || [, ''])[1].replace(/,/g, '')) || null;
     const label = (text.match(/Status:\s*([A-Za-z]+)/) || [, ''])[1];
     if (/This voucher has been redeemed/i.test(text) || /^redeemed$/i.test(label)) {
